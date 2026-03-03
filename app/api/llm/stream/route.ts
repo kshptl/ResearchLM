@@ -3,7 +3,7 @@ import { z } from "zod"
 import type { GenerationRequest } from "@/features/generation/types"
 import { assertByokPolicy } from "@/lib/auth/byok-policy"
 import { getProviderAdapter } from "@/lib/providers/registry"
-import { encodeSseEvent, encodeSsePing } from "@/lib/sse/events"
+import { assertMonotonicSequence, encodeSseEvent, encodeSsePing } from "@/lib/sse/events"
 import { toErrorEnvelope } from "@/lib/sse/error-envelope"
 
 const requestSchema = z.object({
@@ -49,9 +49,14 @@ export async function POST(request: Request): Promise<Response> {
       async start(controller) {
         const encoder = new TextEncoder()
         const timer = setInterval(() => controller.enqueue(encoder.encode(encodeSsePing())), 12000)
+        let sequence: number | null = null
 
         try {
           for await (const event of adapter.stream(payload)) {
+            const next = event.data.sequence
+            if (typeof next === "number") {
+              sequence = assertMonotonicSequence(sequence, next)
+            }
             controller.enqueue(encoder.encode(encodeSseEvent(event)))
           }
         } catch (error) {

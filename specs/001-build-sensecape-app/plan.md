@@ -104,8 +104,7 @@ Build a desktop-first Sensecape exploration workspace that combines a three-pane
 |   `-- workspace-ui-contract.md
 |-- checklists/
 |   |-- requirements-writing.md
-|   |-- requirements.md
-|   `-- spec-quality.md
+|   `-- requirements.md
 `-- tasks.md
 ```
 

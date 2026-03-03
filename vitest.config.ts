@@ -9,9 +9,17 @@ export default defineConfig({
   },
   test: {
     globals: true,
-    include: ["tests/**/*.test.ts", "tests/**/*.test.tsx"],
+    include: [
+      "tests/unit/**/*.test.ts",
+      "tests/unit/**/*.test.tsx",
+      "tests/integration/**/*.test.ts",
+      "tests/integration/**/*.test.tsx",
+      "tests/contract/**/*.test.ts",
+      "tests/contract/**/*.test.tsx"
+    ],
     exclude: ["tests/e2e/**"],
     environment: "jsdom",
-    setupFiles: ["./tests/setup.ts"]
+    setupFiles: ["./tests/setup.ts"],
+    passWithNoTests: false
   }
 })

@@ -21,11 +21,13 @@ export function HierarchyView({ canvases, links, activeCanvasId, onSelectCanvas 
             <button
               type="button"
               onClick={() => onSelectCanvas(canvas.id)}
+              aria-current={activeCanvasId === canvas.id ? "page" : undefined}
               className={`w-full rounded px-2 py-1 text-left text-xs ${
                 activeCanvasId === canvas.id ? "bg-sky-100" : "bg-slate-100"
               }`}
             >
-              {canvas.topic}
+              <span className="font-medium">{canvas.topic}</span>
+              <span className="ml-2 text-[10px] text-slate-600">depth {canvas.depth}</span>
             </button>
           </li>
         ))}

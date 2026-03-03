@@ -1,7 +1,9 @@
 "use client"
 
 import { useCallback, useState } from "react"
-import type { GenerationIntent, GenerationRequest } from "@/features/generation/types"
+import type { GenerationAttempt, GenerationIntent, GenerationRequest, LocalGenerationLog } from "@/features/generation/types"
+import { persistenceRepository } from "@/features/persistence/repository"
+import { consumeGenerationStream } from "@/features/generation/stream-consumer"
 
 type Options = {
   provider: GenerationRequest["provider"]
@@ -12,13 +14,37 @@ type Options = {
 export function useGeneration({ provider, model, credential }: Options) {
   const [isStreaming, setIsStreaming] = useState(false)
   const [error, setError] = useState<string>()
+  const [qualityNotice, setQualityNotice] = useState<string>()
 
   const runIntent = useCallback(
     async (intent: GenerationIntent, prompt: string): Promise<string> => {
       setError(undefined)
+      setQualityNotice(undefined)
       setIsStreaming(true)
+      const requestId = crypto.randomUUID()
+      const now = new Date().toISOString()
 
       try {
+        await persistenceRepository.saveGenerationRequest({
+          id: requestId,
+          provider,
+          model,
+          intent,
+          status: "pending",
+          createdAt: now,
+          updatedAt: now
+        })
+
+        const attempt: GenerationAttempt = {
+          id: crypto.randomUUID(),
+          requestId,
+          attemptNumber: 1,
+          triggerType: "initial",
+          status: "streaming",
+          createdAt: now
+        }
+        await persistenceRepository.saveGenerationAttempt(attempt)
+
         const response = await fetch("/api/llm/stream", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -35,22 +61,44 @@ export function useGeneration({ provider, model, credential }: Options) {
           throw new Error("Unable to stream model response")
         }
 
-        const reader = response.body.getReader()
-        const decoder = new TextDecoder()
-        let text = ""
+        const { text, qualityNotice } = await consumeGenerationStream(response.body, prompt)
 
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) {
-            break
-          }
-          text += decoder.decode(value, { stream: true })
+        if (qualityNotice) {
+          setQualityNotice(`${qualityNotice.message} (${qualityNotice.actions.join("/")})`)
         }
+
+        const completionLog: LocalGenerationLog = {
+          id: crypto.randomUUID(),
+          requestId,
+          eventType: "generation_completed",
+          provider,
+          outcome: "ok",
+          timestamp: new Date().toISOString(),
+          metadata: {
+            intent,
+            hasQualityNotice: Boolean(qualityNotice)
+          }
+        }
+        await persistenceRepository.saveLocalGenerationLog(completionLog)
 
         return text
       } catch (err) {
         const message = err instanceof Error ? err.message : "Unknown generation error"
         setError(message)
+
+        const failureLog: LocalGenerationLog = {
+          id: crypto.randomUUID(),
+          requestId,
+          eventType: "generation_failed",
+          provider,
+          outcome: "failed",
+          timestamp: new Date().toISOString(),
+          metadata: {
+            intent,
+            message
+          }
+        }
+        await persistenceRepository.saveLocalGenerationLog(failureLog)
         throw err
       } finally {
         setIsStreaming(false)
@@ -62,6 +110,7 @@ export function useGeneration({ provider, model, credential }: Options) {
   return {
     isStreaming,
     error,
+    qualityNotice,
     runIntent
   }
 }

@@ -9,9 +9,58 @@
   --border: 214 32% 91%;
   --primary: 201 95% 38%;
   --secondary: 150 40% 93%;
+  --surface-muted: 214 20% 96%;
+
+  --node-topic-bg: 200 85% 92%;
+  --node-topic-fg: 215 65% 20%;
+  --node-generated-bg: 140 60% 93%;
+  --node-generated-fg: 152 58% 22%;
+  --node-question-bg: 42 98% 92%;
+  --node-question-fg: 32 85% 22%;
+  --node-summary-bg: 265 56% 93%;
+  --node-summary-fg: 268 60% 25%;
+  --node-keyword-bg: 350 76% 94%;
+  --node-keyword-fg: 342 70% 26%;
+  --node-portal-bg: 216 72% 93%;
+  --node-portal-fg: 221 62% 24%;
 }
 
 body {
   background: hsl(var(--background));
   color: hsl(var(--foreground));
+}
+
+.workspace-pane {
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+}
+
+.node-token-topic {
+  background: hsl(var(--node-topic-bg));
+  color: hsl(var(--node-topic-fg));
+}
+
+.node-token-generated {
+  background: hsl(var(--node-generated-bg));
+  color: hsl(var(--node-generated-fg));
+}
+
+.node-token-question {
+  background: hsl(var(--node-question-bg));
+  color: hsl(var(--node-question-fg));
+}
+
+.node-token-summary {
+  background: hsl(var(--node-summary-bg));
+  color: hsl(var(--node-summary-fg));
+}
+
+.node-token-keyword {
+  background: hsl(var(--node-keyword-bg));
+  color: hsl(var(--node-keyword-fg));
+}
+
+.node-token-portal {
+  background: hsl(var(--node-portal-bg));
+  color: hsl(var(--node-portal-fg));
 }

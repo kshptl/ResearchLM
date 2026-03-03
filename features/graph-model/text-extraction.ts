@@ -1,10 +1,13 @@
 import type { GraphNode } from "@/features/graph-model/types"
+import { validateExtractionSpan } from "@/features/graph-model/mutations"
 
 export function extractTextToNode(source: GraphNode, selection: string): GraphNode {
   const cleaned = selection.trim()
   if (!cleaned) {
     throw new Error("Cannot create node from empty text selection")
   }
+
+  validateExtractionSpan(cleaned)
 
   const timestamp = new Date().toISOString()
   return {

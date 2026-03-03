@@ -38,12 +38,13 @@ export interface GraphNode {
   content: string
   semanticRepresentations?: Partial<Record<SemanticLevel, string>>
   position: { x: number; y: number }
+  groupId?: string
   sourceNodeId?: string
   createdAt: string
   updatedAt: string
 }
 
-export interface Connection {
+export interface Edge {
   id: string
   workspaceId: string
   canvasId: string
@@ -51,6 +52,20 @@ export interface Connection {
   toNodeId: string
   relationshipType: string
   createdAt: string
+  updatedAt?: string
+}
+
+export type Connection = Edge
+
+export interface NodeGroup {
+  id: string
+  workspaceId: string
+  canvasId: string
+  name?: string
+  nodeIds: string[]
+  colorToken?: string
+  createdAt: string
+  updatedAt: string
 }
 
 export interface HierarchyLink {

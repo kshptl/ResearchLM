@@ -1,4 +1,16 @@
 import type { Canvas, Connection, GraphNode, HierarchyLink, Workspace } from "@/features/graph-model/types"
+import type { GenerationAttempt, LocalGenerationLog } from "@/features/generation/types"
+import type { GeneratedSubtopicCandidate } from "@/features/hierarchy-model/state"
+
+type GenerationRequestRecord = {
+  id: string
+  provider: string
+  model: string
+  intent: string
+  status: string
+  createdAt: string
+  updatedAt: string
+}
 
 export const DB_NAME = "sensecape"
 export const DB_VERSION = 1
@@ -9,6 +21,10 @@ type Stores = {
   nodes: GraphNode
   connections: Connection
   hierarchyLinks: HierarchyLink
+  generatedSubtopicCandidates: GeneratedSubtopicCandidate
+  generationRequests: GenerationRequestRecord
+  generationAttempts: GenerationAttempt
+  localLogs: LocalGenerationLog
   settings: { id: string; value: unknown }
 }
 
@@ -18,6 +34,10 @@ const STORE_NAMES: Array<keyof Stores> = [
   "nodes",
   "connections",
   "hierarchyLinks",
+  "generatedSubtopicCandidates",
+  "generationRequests",
+  "generationAttempts",
+  "localLogs",
   "settings"
 ]
 

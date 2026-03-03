@@ -18,5 +18,8 @@ Thumbs.db
 playwright-report/
 test-results/
 
+# TypeScript build info
+tsconfig.tsbuildinfo
+
 # Local tool folders
 .opencode/

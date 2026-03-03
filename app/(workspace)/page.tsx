@@ -4,11 +4,19 @@ import React from "react"
 import { useEffect, useMemo, useState } from "react"
 import { CanvasBoard } from "@/components/workspace/canvas/canvas-board"
 import { HierarchyControls } from "@/components/workspace/hierarchy/hierarchy-controls"
+import { SubtopicCandidatePicker } from "@/components/workspace/hierarchy/subtopic-candidate-picker"
 import { HierarchyView } from "@/components/workspace/hierarchy/hierarchy-view"
 import { PersistenceStatus } from "@/components/workspace/provider-settings/persistence-status"
 import { ProviderCredentialsForm } from "@/components/workspace/provider-settings/provider-credentials-form"
-import { createChildCanvas } from "@/features/hierarchy-model/state"
-import { setActiveCanvas } from "@/features/hierarchy-model/navigation"
+import { persistenceRepository } from "@/features/persistence/repository"
+import {
+  candidatesForCanvas,
+  createChildCanvas,
+  setSubtopicCandidateLifecycle,
+  upsertSubtopicCandidate,
+  type GeneratedSubtopicCandidate
+} from "@/features/hierarchy-model/state"
+import { setActiveCanvas, synchronizeHierarchySelection } from "@/features/hierarchy-model/navigation"
 import { saveCredential } from "@/lib/auth/credential-store"
 import type { Canvas, HierarchyLink } from "@/features/graph-model/types"
 
@@ -28,6 +36,7 @@ export default function WorkspacePage() {
   const title = useMemo(() => "Sensecape Exploration Workspace", [])
   const [canvases, setCanvases] = useState<Canvas[]>([rootCanvas()])
   const [links, setLinks] = useState<HierarchyLink[]>([])
+  const [candidates, setCandidates] = useState<GeneratedSubtopicCandidate[]>([])
   const [navigation, setNavigation] = useState({ activeCanvasId: "root" })
   const [persistenceStatus, setPersistenceStatus] = useState<"idle" | "saving" | "error">("idle")
 
@@ -43,6 +52,21 @@ export default function WorkspacePage() {
   useEffect(() => {
     localStorage.setItem("sensecape:activeCanvasId", navigation.activeCanvasId)
   }, [navigation.activeCanvasId])
+
+  useEffect(() => {
+    void (async () => {
+      const [savedLinks, savedCandidates] = await Promise.all([
+        persistenceRepository.loadHierarchyLinks("local-workspace"),
+        persistenceRepository.loadGeneratedSubtopicCandidates("local-workspace")
+      ])
+      if (savedLinks.length) {
+        setLinks(savedLinks)
+      }
+      if (savedCandidates.length) {
+        setCandidates(savedCandidates)
+      }
+    })()
+  }, [])
 
   return (
     <section className="mx-auto max-w-6xl space-y-4">
@@ -71,17 +95,18 @@ export default function WorkspacePage() {
               }
               const child = createChildCanvas(activeCanvas, `Subtopic ${canvases.length}`)
               setCanvases((current) => [...current, child])
-              setLinks((current) => [
-                ...current,
-                {
+              setLinks((current) => {
+                const link: HierarchyLink = {
                   id: crypto.randomUUID(),
                   workspaceId: activeCanvas.workspaceId,
                   parentCanvasId: activeCanvas.id,
                   childCanvasId: child.id,
-                  linkType: "subtopic",
+                  linkType: "subtopic" as const,
                   createdAt: new Date().toISOString()
                 }
-              ])
+                void persistenceRepository.saveHierarchyLink(link)
+                return [...current, link]
+              })
             }}
             onAddSibling={() => {
               const now = new Date().toISOString()
@@ -97,6 +122,21 @@ export default function WorkspacePage() {
                   updatedAt: now
                 }
               ])
+
+              const candidate: GeneratedSubtopicCandidate = {
+                id: crypto.randomUUID(),
+                workspaceId: "local-workspace",
+                parentCanvasId: activeCanvas?.id ?? "root",
+                label: `Sibling candidate ${canvases.length}`,
+                lifecycle: "presented",
+                createdAt: now,
+                updatedAt: now
+              }
+              setCandidates((current) => {
+                const next = upsertSubtopicCandidate(current, candidate)
+                void persistenceRepository.saveGeneratedSubtopicCandidate(candidate)
+                return next
+              })
             }}
           />
           <div className="mt-4">
@@ -111,7 +151,30 @@ export default function WorkspacePage() {
             canvases={canvases}
             links={links}
             activeCanvasId={navigation.activeCanvasId}
-            onSelectCanvas={(id) => setNavigation((current) => setActiveCanvas(current, id))}
+            onSelectCanvas={(id) => setNavigation((current) => synchronizeHierarchySelection(current, id))}
+          />
+          <SubtopicCandidatePicker
+            candidates={candidatesForCanvas(candidates, navigation.activeCanvasId)}
+            onSelect={(candidateId) => {
+              setCandidates((current) => {
+                const next = setSubtopicCandidateLifecycle(current, candidateId, "selected")
+                const changed = next.find((candidate) => candidate.id === candidateId)
+                if (changed) {
+                  void persistenceRepository.saveGeneratedSubtopicCandidate(changed)
+                }
+                return next
+              })
+            }}
+            onDismiss={(candidateId) => {
+              setCandidates((current) => {
+                const next = setSubtopicCandidateLifecycle(current, candidateId, "dismissed")
+                const changed = next.find((candidate) => candidate.id === candidateId)
+                if (changed) {
+                  void persistenceRepository.saveGeneratedSubtopicCandidate(changed)
+                }
+                return next
+              })
+            }}
           />
           <ProviderCredentialsForm
             onSave={({ provider, type, credential }) => {

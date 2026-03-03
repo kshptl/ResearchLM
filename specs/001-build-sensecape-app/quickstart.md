@@ -79,6 +79,14 @@ Implement a desktop-first Sensecape experience with:
 - `npm run test:e2e`
 - constitution compliance check across spec/plan/tasks
 
+## Constitution Quality Checklist
+
+- Code quality evidence includes lint, format check, and static analysis outputs.
+- Testing evidence includes unit, integration, contract, and e2e coverage for touched workflows.
+- UX consistency evidence includes keyboard parity, focus order/restoration, and non-blocking messaging validation.
+- Performance evidence includes p95 interaction and generation-latency artifacts with run metadata.
+- Review package includes updated traceability mapping and any documented temporary exceptions with owner and expiry.
+
 ## Frontend Evidence Artifacts
 
 - p95 node interaction timing report at baseline load (<=300 nodes/500 edges)

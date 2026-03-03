@@ -25,18 +25,18 @@
 
 **Purpose**: Initialize project tooling, quality gates, and desktop workspace shell scaffolding.
 
-- [ ] T001 Update dependency and script gates (`format:check`, `typecheck`) in `/home/kush/researchlm/package.json`
-- [ ] T002 Configure strict TypeScript compiler and module resolution defaults in `/home/kush/researchlm/tsconfig.json`
-- [ ] T003 Configure lint rules for app/features/lib/tests boundaries in `/home/kush/researchlm/.eslintrc.json`
-- [ ] T004 [P] Configure Playwright desktop projects and tracing defaults in `/home/kush/researchlm/playwright.config.ts`
-- [ ] T005 [P] Configure Vitest environment, setup hooks, and include patterns in `/home/kush/researchlm/vitest.config.ts`
-- [ ] T006 [P] Define workspace/node visual design tokens with AA-safe contrasts in `/home/kush/researchlm/app/globals.css`
-- [ ] T007 [P] Scaffold workspace shell container component in `/home/kush/researchlm/components/workspace/layout/workspace-shell.tsx`
-- [ ] T008 [P] Add desktop-only guard, editing disablement, and persistent desktop-guidance messaging in `/home/kush/researchlm/app/(workspace)/layout.tsx`
-- [ ] T009 [P] Add seeded workspace graph fixtures for repeatable tests in `/home/kush/researchlm/tests/helpers/workspace-fixtures.ts`
-- [ ] T010 [P] Add interaction timing helper utilities for performance assertions in `/home/kush/researchlm/tests/helpers/performance-metrics.ts`
-- [ ] T011 Add constitution quality gate checklist items to verification guidance in `/home/kush/researchlm/specs/001-build-sensecape-app/quickstart.md`
-- [ ] T012 Create feature divergence notes baseline in `/home/kush/researchlm/specs/001-build-sensecape-app/feature-notes.md`
+- [X] T001 Update dependency and script gates (`format:check`, `typecheck`) in `/home/kush/researchlm/package.json`
+- [X] T002 Configure strict TypeScript compiler and module resolution defaults in `/home/kush/researchlm/tsconfig.json`
+- [X] T003 Configure lint rules for app/features/lib/tests boundaries in `/home/kush/researchlm/.eslintrc.json`
+- [X] T004 [P] Configure Playwright desktop projects and tracing defaults in `/home/kush/researchlm/playwright.config.ts`
+- [X] T005 [P] Configure Vitest environment, setup hooks, and include patterns in `/home/kush/researchlm/vitest.config.ts`
+- [X] T006 [P] Define workspace/node visual design tokens with AA-safe contrasts in `/home/kush/researchlm/app/globals.css`
+- [X] T007 [P] Scaffold workspace shell container component in `/home/kush/researchlm/components/workspace/layout/workspace-shell.tsx`
+- [X] T008 [P] Add desktop-only guard, editing disablement, and persistent desktop-guidance messaging in `/home/kush/researchlm/app/(workspace)/layout.tsx`
+- [X] T009 [P] Add seeded workspace graph fixtures for repeatable tests in `/home/kush/researchlm/tests/helpers/workspace-fixtures.ts`
+- [X] T010 [P] Add interaction timing helper utilities for performance assertions in `/home/kush/researchlm/tests/helpers/performance-metrics.ts`
+- [X] T011 Add constitution quality gate checklist items to verification guidance in `/home/kush/researchlm/specs/001-build-sensecape-app/quickstart.md`
+- [X] T012 Create feature divergence notes baseline in `/home/kush/researchlm/specs/001-build-sensecape-app/feature-notes.md`
 
 ---
 
@@ -46,26 +46,26 @@
 
 **CRITICAL**: Complete this phase before any user story implementation.
 
-- [ ] T013 Define normalized Workspace/Canvas/Node/Edge/NodeGroup schemas in `/home/kush/researchlm/features/graph-model/types.ts`
-- [ ] T014 [P] Define generation request/attempt domain types in `/home/kush/researchlm/features/generation/types.ts`
-- [ ] T015 [P] Implement workspace store slices (persisted, ephemeral, inspector draft) with pane-layout persistence and width clamping in `/home/kush/researchlm/features/graph-model/workspace-store.ts`
-- [ ] T016 [P] Implement interaction mode state machine (`select`,`pan`,`connect`,`lasso`) in `/home/kush/researchlm/features/graph-model/interaction-mode.ts`
-- [ ] T017 [P] Implement multi-select and lasso selection state utilities in `/home/kush/researchlm/features/graph-model/selection-state.ts`
-- [ ] T018 [P] Implement command history engine with >=100 action depth guarantees in `/home/kush/researchlm/features/graph-model/history-engine.ts`
-- [ ] T019 [P] Implement keyboard shortcut command mapping for core actions in `/home/kush/researchlm/features/graph-model/keyboard-shortcuts.ts`
-- [ ] T020 [P] Implement node/edge/group mutation helpers with invariants in `/home/kush/researchlm/features/graph-model/mutations.ts`
-- [ ] T021 [P] Implement IndexedDB schema versioning and store registration in `/home/kush/researchlm/lib/idb/database.ts`
-- [ ] T022 [P] Implement IndexedDB transactional helpers for normalized entities in `/home/kush/researchlm/lib/idb/transactions.ts`
-- [ ] T023 Implement persistence repository API for workspace graph entities in `/home/kush/researchlm/features/persistence/repository.ts`
-- [ ] T024 Implement workspace hydration/save orchestration hooks in `/home/kush/researchlm/features/persistence/workspace-persistence-service.ts`
-- [ ] T025 [P] Implement backup manifest serialization primitives in `/home/kush/researchlm/features/persistence/workspace-backup.ts`
-- [ ] T026 [P] Implement encrypted credential persistence and lifecycle model in `/home/kush/researchlm/lib/auth/credential-store.ts`
-- [ ] T027 Implement BYOK policy preflight and consumer-token rejection checks in `/home/kush/researchlm/lib/auth/byok-policy.ts`
-- [ ] T028 [P] Implement SSE event codecs with monotonic sequence assertions in `/home/kush/researchlm/lib/sse/events.ts`
-- [ ] T029 [P] Implement canonical streaming error envelope mapping in `/home/kush/researchlm/lib/sse/error-envelope.ts`
-- [ ] T030 Implement provider adapter registry and capability routing in `/home/kush/researchlm/lib/providers/registry.ts`
-- [ ] T031 Implement stream route request validation and adapter invocation baseline in `/home/kush/researchlm/app/api/llm/stream/route.ts`
-- [ ] T032 Add foundational state/persistence invariant tests (including pane-layout clamp invariants) in `/home/kush/researchlm/tests/unit/graph-model/foundation-invariants.test.ts`
+- [X] T013 Define normalized Workspace/Canvas/Node/Edge/NodeGroup schemas in `/home/kush/researchlm/features/graph-model/types.ts`
+- [X] T014 [P] Define generation request/attempt domain types in `/home/kush/researchlm/features/generation/types.ts`
+- [X] T015 [P] Implement workspace store slices (persisted, ephemeral, inspector draft) with pane-layout persistence and width clamping in `/home/kush/researchlm/features/graph-model/workspace-store.ts`
+- [X] T016 [P] Implement interaction mode state machine (`select`,`pan`,`connect`,`lasso`) in `/home/kush/researchlm/features/graph-model/interaction-mode.ts`
+- [X] T017 [P] Implement multi-select and lasso selection state utilities in `/home/kush/researchlm/features/graph-model/selection-state.ts`
+- [X] T018 [P] Implement command history engine with >=100 action depth guarantees in `/home/kush/researchlm/features/graph-model/history-engine.ts`
+- [X] T019 [P] Implement keyboard shortcut command mapping for core actions in `/home/kush/researchlm/features/graph-model/keyboard-shortcuts.ts`
+- [X] T020 [P] Implement node/edge/group mutation helpers with invariants in `/home/kush/researchlm/features/graph-model/mutations.ts`
+- [X] T021 [P] Implement IndexedDB schema versioning and store registration in `/home/kush/researchlm/lib/idb/database.ts`
+- [X] T022 [P] Implement IndexedDB transactional helpers for normalized entities in `/home/kush/researchlm/lib/idb/transactions.ts`
+- [X] T023 Implement persistence repository API for workspace graph entities in `/home/kush/researchlm/features/persistence/repository.ts`
+- [X] T024 Implement workspace hydration/save orchestration hooks in `/home/kush/researchlm/features/persistence/workspace-persistence-service.ts`
+- [X] T025 [P] Implement backup manifest serialization primitives in `/home/kush/researchlm/features/persistence/workspace-backup.ts`
+- [X] T026 [P] Implement encrypted credential persistence and lifecycle model in `/home/kush/researchlm/lib/auth/credential-store.ts`
+- [X] T027 Implement BYOK policy preflight and consumer-token rejection checks in `/home/kush/researchlm/lib/auth/byok-policy.ts`
+- [X] T028 [P] Implement SSE event codecs with monotonic sequence assertions in `/home/kush/researchlm/lib/sse/events.ts`
+- [X] T029 [P] Implement canonical streaming error envelope mapping in `/home/kush/researchlm/lib/sse/error-envelope.ts`
+- [X] T030 Implement provider adapter registry and capability routing in `/home/kush/researchlm/lib/providers/registry.ts`
+- [X] T031 Implement stream route request validation and adapter invocation baseline in `/home/kush/researchlm/app/api/llm/stream/route.ts`
+- [X] T032 Add foundational state/persistence invariant tests (including pane-layout clamp invariants) in `/home/kush/researchlm/tests/unit/graph-model/foundation-invariants.test.ts`
 
 **Checkpoint**: Foundation complete. User stories can start.
 
@@ -79,43 +79,43 @@
 
 ### Tests for User Story 1
 
-- [ ] T033 [P] [US1] Add contract test for stream request/response schema in `/home/kush/researchlm/tests/contract/llm-stream.contract.test.ts`
-- [ ] T034 [P] [US1] Add contract test for SSE event ordering and terminal semantics in `/home/kush/researchlm/tests/contract/sse-events.contract.test.ts`
-- [ ] T035 [P] [US1] Add unit tests for node/edge/group operations in `/home/kush/researchlm/tests/unit/graph-model/canvas-operations.test.ts`
-- [ ] T036 [P] [US1] Add unit tests for interaction mode transition guards in `/home/kush/researchlm/tests/unit/graph-model/interaction-mode.test.ts`
-- [ ] T037 [P] [US1] Add unit tests for lasso and multi-select state behavior in `/home/kush/researchlm/tests/unit/graph-model/selection-state.test.ts`
-- [ ] T038 [P] [US1] Add unit tests for undo/redo depth and cursor stepping in `/home/kush/researchlm/tests/unit/graph-model/history-engine.test.ts`
-- [ ] T039 [P] [US1] Add unit tests for text extraction provenance and span-bound constraints in `/home/kush/researchlm/tests/unit/graph-model/text-extraction.test.ts`
-- [ ] T040 [P] [US1] Add unit tests for why/what/when/where/how question balancing in `/home/kush/researchlm/tests/unit/generation/question-balance.test.ts`
-- [ ] T041 [P] [US1] Add integration test for generation expansion flow on canvas, including FR-033 quality-notice actions (retry, change-action, dismiss), in `/home/kush/researchlm/tests/integration/workspace/generation-flow.test.tsx`
-- [ ] T042 [P] [US1] Add integration test for manual retry preserving unsaved context in `/home/kush/researchlm/tests/integration/workspace/retry-preserves-context.test.tsx`
-- [ ] T043 [P] [US1] Add integration test for lasso/minimap/history-panel interactions in `/home/kush/researchlm/tests/integration/workspace/canvas-advanced-interactions.test.tsx`
-- [ ] T044 [US1] Add e2e acceptance for advanced canvas exploration journey in `/home/kush/researchlm/tests/e2e/us1-canvas-exploration.spec.ts`
-- [ ] T045 [US1] Add e2e keyboard-only core action flow in `/home/kush/researchlm/tests/e2e/us1-keyboard-canvas-flow.spec.ts`
+- [X] T033 [P] [US1] Add contract test for stream request/response schema in `/home/kush/researchlm/tests/contract/llm-stream.contract.test.ts`
+- [X] T034 [P] [US1] Add contract test for SSE event ordering and terminal semantics in `/home/kush/researchlm/tests/contract/sse-events.contract.test.ts`
+- [X] T035 [P] [US1] Add unit tests for node/edge/group operations in `/home/kush/researchlm/tests/unit/graph-model/canvas-operations.test.ts`
+- [X] T036 [P] [US1] Add unit tests for interaction mode transition guards in `/home/kush/researchlm/tests/unit/graph-model/interaction-mode.test.ts`
+- [X] T037 [P] [US1] Add unit tests for lasso and multi-select state behavior in `/home/kush/researchlm/tests/unit/graph-model/selection-state.test.ts`
+- [X] T038 [P] [US1] Add unit tests for undo/redo depth and cursor stepping in `/home/kush/researchlm/tests/unit/graph-model/history-engine.test.ts`
+- [X] T039 [P] [US1] Add unit tests for text extraction provenance and span-bound constraints in `/home/kush/researchlm/tests/unit/graph-model/text-extraction.test.ts`
+- [X] T040 [P] [US1] Add unit tests for why/what/when/where/how question balancing in `/home/kush/researchlm/tests/unit/generation/question-balance.test.ts`
+- [X] T041 [P] [US1] Add integration test for generation expansion flow on canvas, including FR-033 quality-notice actions (retry, change-action, dismiss), in `/home/kush/researchlm/tests/integration/workspace/generation-flow.test.tsx`
+- [X] T042 [P] [US1] Add integration test for manual retry preserving unsaved context in `/home/kush/researchlm/tests/integration/workspace/retry-preserves-context.test.tsx`
+- [X] T043 [P] [US1] Add integration test for lasso/minimap/history-panel interactions in `/home/kush/researchlm/tests/integration/workspace/canvas-advanced-interactions.test.tsx`
+- [X] T044 [US1] Add e2e acceptance for advanced canvas exploration journey in `/home/kush/researchlm/tests/e2e/us1-canvas-exploration.spec.ts`
+- [X] T045 [US1] Add e2e keyboard-only core action flow in `/home/kush/researchlm/tests/e2e/us1-keyboard-canvas-flow.spec.ts`
 
 ### Implementation for User Story 1
 
-- [ ] T046 [P] [US1] Compose three-pane workspace route entry in `/home/kush/researchlm/app/(workspace)/page.tsx`
-- [ ] T047 [P] [US1] Implement pan/zoom/multi-select/lasso/minimap behavior in `/home/kush/researchlm/components/workspace/canvas/canvas-board.tsx`
-- [ ] T048 [P] [US1] Implement six-node-type visual contract rendering in `/home/kush/researchlm/components/workspace/canvas/node-card.tsx`
-- [ ] T049 [P] [US1] Implement expansion actions UI (prompt/explain/questions/subtopics) with intent-specific output affordances in `/home/kush/researchlm/components/workspace/canvas/expand-actions.tsx`
-- [ ] T050 [P] [US1] Implement history panel component for undo/redo timeline in `/home/kush/researchlm/components/workspace/canvas/history-panel.tsx`
-- [ ] T051 [P] [US1] Implement inspector panel with editable draft state in `/home/kush/researchlm/components/workspace/inspector/inspector-panel.tsx`
-- [ ] T052 [US1] Implement command transaction batching for graph mutations in `/home/kush/researchlm/features/graph-model/mutations.ts`
-- [ ] T053 [US1] Implement highlight-to-node extraction command flow with explicit short/long span rejection messaging in `/home/kush/researchlm/features/graph-model/text-extraction.ts`
-- [ ] T054 [US1] Implement interaction controller bridging pointer/keyboard to commands in `/home/kush/researchlm/features/graph-model/interaction-controller.ts`
-- [ ] T055 [US1] Implement node visual token and contrast validation helpers in `/home/kush/researchlm/features/graph-model/node-visual-contract.ts`
-- [ ] T056 [US1] Implement generation orchestration for all expansion intents with inline output-shape validators aligned to FR-003/FR-033 in `/home/kush/researchlm/features/generation/use-generation.ts`
-- [ ] T057 [US1] Implement generation stream consumer for incremental node updates with empty/repetitive/off-topic/malformed quality handling and retry/change-action/dismiss notices in `/home/kush/researchlm/features/generation/stream-consumer.ts`
-- [ ] T058 [US1] Implement manual retry context preservation snapshots in `/home/kush/researchlm/features/generation/retry-context.ts`
-- [ ] T059 [US1] Implement balanced-question post-processing validator in `/home/kush/researchlm/features/generation/question-balance.ts`
-- [ ] T060 [US1] Implement normalized SSE event emission in `/home/kush/researchlm/app/api/llm/stream/route.ts`
-- [ ] T061 [P] [US1] Implement OpenAI streaming adapter mapper in `/home/kush/researchlm/lib/providers/openai/adapter.ts`
-- [ ] T062 [P] [US1] Implement Anthropic streaming adapter mapper in `/home/kush/researchlm/lib/providers/anthropic/adapter.ts`
-- [ ] T063 [P] [US1] Implement Gemini streaming adapter mapper in `/home/kush/researchlm/lib/providers/gemini/adapter.ts`
-- [ ] T064 [P] [US1] Implement OpenRouter streaming adapter mapper in `/home/kush/researchlm/lib/providers/openrouter/adapter.ts`
-- [ ] T065 [P] [US1] Implement GitHub Models streaming adapter mapper in `/home/kush/researchlm/lib/providers/github-models/adapter.ts`
-- [ ] T066 [US1] Persist generation request/attempt entities and local generation logs in `/home/kush/researchlm/features/persistence/repository.ts`
+- [X] T046 [P] [US1] Compose three-pane workspace route entry in `/home/kush/researchlm/app/(workspace)/page.tsx`
+- [X] T047 [P] [US1] Implement pan/zoom/multi-select/lasso/minimap behavior in `/home/kush/researchlm/components/workspace/canvas/canvas-board.tsx`
+- [X] T048 [P] [US1] Implement six-node-type visual contract rendering in `/home/kush/researchlm/components/workspace/canvas/node-card.tsx`
+- [X] T049 [P] [US1] Implement expansion actions UI (prompt/explain/questions/subtopics) with intent-specific output affordances in `/home/kush/researchlm/components/workspace/canvas/expand-actions.tsx`
+- [X] T050 [P] [US1] Implement history panel component for undo/redo timeline in `/home/kush/researchlm/components/workspace/canvas/history-panel.tsx`
+- [X] T051 [P] [US1] Implement inspector panel with editable draft state in `/home/kush/researchlm/components/workspace/inspector/inspector-panel.tsx`
+- [X] T052 [US1] Implement command transaction batching for graph mutations in `/home/kush/researchlm/features/graph-model/mutations.ts`
+- [X] T053 [US1] Implement highlight-to-node extraction command flow with explicit short/long span rejection messaging in `/home/kush/researchlm/features/graph-model/text-extraction.ts`
+- [X] T054 [US1] Implement interaction controller bridging pointer/keyboard to commands in `/home/kush/researchlm/features/graph-model/interaction-controller.ts`
+- [X] T055 [US1] Implement node visual token and contrast validation helpers in `/home/kush/researchlm/features/graph-model/node-visual-contract.ts`
+- [X] T056 [US1] Implement generation orchestration for all expansion intents with inline output-shape validators aligned to FR-003/FR-033 in `/home/kush/researchlm/features/generation/use-generation.ts`
+- [X] T057 [US1] Implement generation stream consumer for incremental node updates with empty/repetitive/off-topic/malformed quality handling and retry/change-action/dismiss notices in `/home/kush/researchlm/features/generation/stream-consumer.ts`
+- [X] T058 [US1] Implement manual retry context preservation snapshots in `/home/kush/researchlm/features/generation/retry-context.ts`
+- [X] T059 [US1] Implement balanced-question post-processing validator in `/home/kush/researchlm/features/generation/question-balance.ts`
+- [X] T060 [US1] Implement normalized SSE event emission in `/home/kush/researchlm/app/api/llm/stream/route.ts`
+- [X] T061 [P] [US1] Implement OpenAI streaming adapter mapper in `/home/kush/researchlm/lib/providers/openai/adapter.ts`
+- [X] T062 [P] [US1] Implement Anthropic streaming adapter mapper in `/home/kush/researchlm/lib/providers/anthropic/adapter.ts`
+- [X] T063 [P] [US1] Implement Gemini streaming adapter mapper in `/home/kush/researchlm/lib/providers/gemini/adapter.ts`
+- [X] T064 [P] [US1] Implement OpenRouter streaming adapter mapper in `/home/kush/researchlm/lib/providers/openrouter/adapter.ts`
+- [X] T065 [P] [US1] Implement GitHub Models streaming adapter mapper in `/home/kush/researchlm/lib/providers/github-models/adapter.ts`
+- [X] T066 [US1] Persist generation request/attempt entities and local generation logs in `/home/kush/researchlm/features/persistence/repository.ts`
 
 **Checkpoint**: US1 is independently functional and demoable as MVP.
 
@@ -129,26 +129,26 @@
 
 ### Tests for User Story 2
 
-- [ ] T067 [P] [US2] Add unit tests for hierarchy invariants and cycle prevention in `/home/kush/researchlm/tests/unit/hierarchy-model/hierarchy-rules.test.ts`
-- [ ] T068 [P] [US2] Add unit tests for semantic dive child-canvas creation and repeated-dive reuse behavior in `/home/kush/researchlm/tests/unit/hierarchy-model/semantic-dive.test.ts`
-- [ ] T069 [P] [US2] Add unit tests for branch delete safety with active descendants in `/home/kush/researchlm/tests/unit/hierarchy-model/branch-delete.test.ts`
-- [ ] T070 [P] [US2] Add integration test for hierarchy/canvas navigation synchronization in `/home/kush/researchlm/tests/integration/workspace/hierarchy-navigation.test.tsx`
-- [ ] T071 [P] [US2] Add integration test for generated subtopic candidate selection and dismiss/persist lifecycle flow in `/home/kush/researchlm/tests/integration/workspace/generated-subtopic-selection.test.tsx`
-- [ ] T072 [P] [US2] Add integration test for portal-node navigation behavior in `/home/kush/researchlm/tests/integration/workspace/portal-navigation.test.tsx`
-- [ ] T073 [US2] Add e2e acceptance for multilevel hierarchy workflow in `/home/kush/researchlm/tests/e2e/us2-hierarchy-navigation.spec.ts`
+- [X] T067 [P] [US2] Add unit tests for hierarchy invariants and cycle prevention in `/home/kush/researchlm/tests/unit/hierarchy-model/hierarchy-rules.test.ts`
+- [X] T068 [P] [US2] Add unit tests for semantic dive child-canvas creation and repeated-dive reuse behavior in `/home/kush/researchlm/tests/unit/hierarchy-model/semantic-dive.test.ts`
+- [X] T069 [P] [US2] Add unit tests for branch delete safety with active descendants in `/home/kush/researchlm/tests/unit/hierarchy-model/branch-delete.test.ts`
+- [X] T070 [P] [US2] Add integration test for hierarchy/canvas navigation synchronization in `/home/kush/researchlm/tests/integration/workspace/hierarchy-navigation.test.tsx`
+- [X] T071 [P] [US2] Add integration test for generated subtopic candidate selection and dismiss/persist lifecycle flow in `/home/kush/researchlm/tests/integration/workspace/generated-subtopic-selection.test.tsx`
+- [X] T072 [P] [US2] Add integration test for portal-node navigation behavior in `/home/kush/researchlm/tests/integration/workspace/portal-navigation.test.tsx`
+- [X] T073 [US2] Add e2e acceptance for multilevel hierarchy workflow in `/home/kush/researchlm/tests/e2e/us2-hierarchy-navigation.spec.ts`
 
 ### Implementation for User Story 2
 
-- [ ] T074 [P] [US2] Implement hierarchy view rendering with depth and active state in `/home/kush/researchlm/components/workspace/hierarchy/hierarchy-view.tsx`
-- [ ] T075 [P] [US2] Implement hierarchy controls for broad/sibling/subtopic creation in `/home/kush/researchlm/components/workspace/hierarchy/hierarchy-controls.tsx`
-- [ ] T076 [P] [US2] Implement generated subtopic candidate picker UI with presented/selected/dismissed/pending lifecycle states in `/home/kush/researchlm/components/workspace/hierarchy/subtopic-candidate-picker.tsx`
-- [ ] T077 [US2] Implement hierarchy reducers/selectors for links and canvas tree in `/home/kush/researchlm/features/hierarchy-model/state.ts`
-- [ ] T078 [US2] Implement semantic dive command and child canvas materialization with default reuse and duplicate-link prevention in `/home/kush/researchlm/features/hierarchy-model/semantic-dive.ts`
-- [ ] T079 [US2] Implement hierarchy and canvas navigation synchronization in `/home/kush/researchlm/features/hierarchy-model/navigation.ts`
-- [ ] T080 [US2] Implement safe branch deletion and reroute behavior in `/home/kush/researchlm/features/hierarchy-model/branch-delete.ts`
-- [ ] T081 [US2] Implement portal-node creation coupled to hierarchy links in `/home/kush/researchlm/features/graph-model/portal-node.ts`
-- [ ] T082 [US2] Persist hierarchy links and generated subtopic candidates including lifecycle state across reload in `/home/kush/researchlm/features/persistence/repository.ts`
-- [ ] T083 [US2] Add hierarchy transition timing instrumentation in `/home/kush/researchlm/features/hierarchy-model/perf-metrics.ts`
+- [X] T074 [P] [US2] Implement hierarchy view rendering with depth and active state in `/home/kush/researchlm/components/workspace/hierarchy/hierarchy-view.tsx`
+- [X] T075 [P] [US2] Implement hierarchy controls for broad/sibling/subtopic creation in `/home/kush/researchlm/components/workspace/hierarchy/hierarchy-controls.tsx`
+- [X] T076 [P] [US2] Implement generated subtopic candidate picker UI with presented/selected/dismissed/pending lifecycle states in `/home/kush/researchlm/components/workspace/hierarchy/subtopic-candidate-picker.tsx`
+- [X] T077 [US2] Implement hierarchy reducers/selectors for links and canvas tree in `/home/kush/researchlm/features/hierarchy-model/state.ts`
+- [X] T078 [US2] Implement semantic dive command and child canvas materialization with default reuse and duplicate-link prevention in `/home/kush/researchlm/features/hierarchy-model/semantic-dive.ts`
+- [X] T079 [US2] Implement hierarchy and canvas navigation synchronization in `/home/kush/researchlm/features/hierarchy-model/navigation.ts`
+- [X] T080 [US2] Implement safe branch deletion and reroute behavior in `/home/kush/researchlm/features/hierarchy-model/branch-delete.ts`
+- [X] T081 [US2] Implement portal-node creation coupled to hierarchy links in `/home/kush/researchlm/features/graph-model/portal-node.ts`
+- [X] T082 [US2] Persist hierarchy links and generated subtopic candidates including lifecycle state across reload in `/home/kush/researchlm/features/persistence/repository.ts`
+- [X] T083 [US2] Add hierarchy transition timing instrumentation in `/home/kush/researchlm/features/hierarchy-model/perf-metrics.ts`
 
 **Checkpoint**: US2 is independently functional and testable.
 
@@ -162,23 +162,23 @@
 
 ### Tests for User Story 3
 
-- [ ] T084 [P] [US3] Add unit tests for semantic representation derivation logic in `/home/kush/researchlm/tests/unit/semantic-levels/semantic-logic.test.ts`
-- [ ] T085 [P] [US3] Add unit tests for semantic breakpoint and override precedence in `/home/kush/researchlm/tests/unit/semantic-levels/breakpoints.test.ts`
-- [ ] T086 [P] [US3] Add integration test for auto semantic transitions on zoom in `/home/kush/researchlm/tests/integration/workspace/semantic-zoom-auto.test.tsx`
-- [ ] T087 [P] [US3] Add integration test for manual semantic selection persistence in `/home/kush/researchlm/tests/integration/workspace/semantic-manual-persistence.test.tsx`
-- [ ] T088 [P] [US3] Add integration test for semantic view restoration after reload in `/home/kush/researchlm/tests/integration/persistence/semantic-view-resume.test.tsx`
-- [ ] T089 [US3] Add e2e acceptance for semantic-level workflow in `/home/kush/researchlm/tests/e2e/us3-semantic-levels.spec.ts`
+- [X] T084 [P] [US3] Add unit tests for semantic representation derivation logic in `/home/kush/researchlm/tests/unit/semantic-levels/semantic-logic.test.ts`
+- [X] T085 [P] [US3] Add unit tests for semantic breakpoint and override precedence in `/home/kush/researchlm/tests/unit/semantic-levels/breakpoints.test.ts`
+- [X] T086 [P] [US3] Add integration test for auto semantic transitions on zoom in `/home/kush/researchlm/tests/integration/workspace/semantic-zoom-auto.test.tsx`
+- [X] T087 [P] [US3] Add integration test for manual semantic selection persistence in `/home/kush/researchlm/tests/integration/workspace/semantic-manual-persistence.test.tsx`
+- [X] T088 [P] [US3] Add integration test for semantic view restoration after reload in `/home/kush/researchlm/tests/integration/persistence/semantic-view-resume.test.tsx`
+- [X] T089 [US3] Add e2e acceptance for semantic-level workflow in `/home/kush/researchlm/tests/e2e/us3-semantic-levels.spec.ts`
 
 ### Implementation for User Story 3
 
-- [ ] T090 [P] [US3] Implement semantic transforms (full/lines/summary/keywords) in `/home/kush/researchlm/features/semantic-levels/representation.ts`
-- [ ] T091 [P] [US3] Implement semantic mode state (auto/manual + breakpoints) in `/home/kush/researchlm/features/semantic-levels/state.ts`
-- [ ] T092 [P] [US3] Implement semantic level selector interactions in `/home/kush/researchlm/components/workspace/semantic/semantic-level-selector.tsx`
-- [ ] T093 [US3] Integrate semantic projection rendering into node UI in `/home/kush/researchlm/components/workspace/canvas/node-card.tsx`
-- [ ] T094 [US3] Persist per-canvas semantic settings in `/home/kush/researchlm/features/persistence/semantic-view-repository.ts`
-- [ ] T095 [US3] Synchronize semantic controls with inspector selection context in `/home/kush/researchlm/components/workspace/inspector/inspector-panel.tsx`
-- [ ] T096 [US3] Add semantic zoom legend and mode badge in `/home/kush/researchlm/components/workspace/canvas/semantic-legend.tsx`
-- [ ] T097 [US3] Emit semantic-state lifecycle logs in `/home/kush/researchlm/features/persistence/workspace-persistence-service.ts`
+- [X] T090 [P] [US3] Implement semantic transforms (full/lines/summary/keywords) in `/home/kush/researchlm/features/semantic-levels/representation.ts`
+- [X] T091 [P] [US3] Implement semantic mode state (auto/manual + breakpoints) in `/home/kush/researchlm/features/semantic-levels/state.ts`
+- [X] T092 [P] [US3] Implement semantic level selector interactions in `/home/kush/researchlm/components/workspace/semantic/semantic-level-selector.tsx`
+- [X] T093 [US3] Integrate semantic projection rendering into node UI in `/home/kush/researchlm/components/workspace/canvas/node-card.tsx`
+- [X] T094 [US3] Persist per-canvas semantic settings in `/home/kush/researchlm/features/persistence/semantic-view-repository.ts`
+- [X] T095 [US3] Synchronize semantic controls with inspector selection context in `/home/kush/researchlm/components/workspace/inspector/inspector-panel.tsx`
+- [X] T096 [US3] Add semantic zoom legend and mode badge in `/home/kush/researchlm/components/workspace/canvas/semantic-legend.tsx`
+- [X] T097 [US3] Emit semantic-state lifecycle logs in `/home/kush/researchlm/features/persistence/workspace-persistence-service.ts`
 
 **Checkpoint**: US3 is independently functional and testable.
 
@@ -238,7 +238,7 @@
 - [ ] T129 Update quickstart with final verification commands and evidence checklist in `/home/kush/researchlm/specs/001-build-sensecape-app/quickstart.md`
 - [ ] T130 Update feature notes with documented interaction-model divergences in `/home/kush/researchlm/specs/001-build-sensecape-app/feature-notes.md`
 - [ ] T131 Record full verification run outputs in `/home/kush/researchlm/specs/001-build-sensecape-app/checklists/requirements.md`
-- [ ] T132 Add constitution compliance sign-off checklist for review in `/home/kush/researchlm/specs/001-build-sensecape-app/checklists/spec-quality.md`
+- [ ] T132 Add constitution compliance sign-off checklist for review in `/home/kush/researchlm/specs/001-build-sensecape-app/checklists/requirements.md`
 - [ ] T133 [P] Define generation failure notice contract fields in `/home/kush/researchlm/features/generation/failure-notice-contract.ts`
 - [ ] T134 [P] Define conflict-notice lifecycle policy (persist/dismiss/replace) in `/home/kush/researchlm/features/persistence/conflict-notice-policy.ts`
 - [ ] T135 [P] Add integration test for non-blocking generation failure notice fields in `/home/kush/researchlm/tests/integration/workspace/generation-failure-notice.test.tsx`
