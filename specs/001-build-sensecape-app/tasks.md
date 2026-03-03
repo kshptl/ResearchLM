@@ -192,30 +192,30 @@
 
 ### Tests for User Story 4
 
-- [ ] T098 [P] [US4] Add unit tests for hydration and schema migration behavior in `/home/kush/researchlm/tests/unit/persistence/workspace-hydration.test.ts`
-- [ ] T099 [P] [US4] Add unit tests for adaptive snapshot trigger policy in `/home/kush/researchlm/tests/unit/persistence/snapshot-policy.test.ts`
-- [ ] T100 [P] [US4] Add unit tests for backup manifest checksum validation in `/home/kush/researchlm/tests/unit/persistence/backup-validation.test.ts`
-- [ ] T101 [P] [US4] Add unit tests for cross-tab LWW conflict ordering with deterministic per-entity tie-break behavior in `/home/kush/researchlm/tests/unit/persistence/conflict-ordering.test.ts`
-- [ ] T102 [P] [US4] Add unit tests for encrypted credential lifecycle transitions and request-gating outcomes in `/home/kush/researchlm/tests/unit/persistence/credential-lifecycle.test.ts`
-- [ ] T103 [P] [US4] Add integration test for autosave and resume flow in `/home/kush/researchlm/tests/integration/persistence/workspace-resume.test.tsx`
-- [ ] T104 [P] [US4] Add integration test for export/import recovery fidelity in `/home/kush/researchlm/tests/integration/persistence/workspace-backup-restore.test.tsx`
-- [ ] T105 [P] [US4] Add integration test for visible conflict notification rendering in `/home/kush/researchlm/tests/integration/persistence/cross-tab-conflict-notice.test.tsx`
-- [ ] T106 [US4] Add e2e acceptance for resume/backup/conflict journey in `/home/kush/researchlm/tests/e2e/us4-session-resume.spec.ts`
+- [X] T098 [P] [US4] Add unit tests for hydration and schema migration behavior in `/home/kush/researchlm/tests/unit/persistence/workspace-hydration.test.ts`
+- [X] T099 [P] [US4] Add unit tests for adaptive snapshot trigger policy in `/home/kush/researchlm/tests/unit/persistence/snapshot-policy.test.ts`
+- [X] T100 [P] [US4] Add unit tests for backup manifest checksum validation in `/home/kush/researchlm/tests/unit/persistence/backup-validation.test.ts`
+- [X] T101 [P] [US4] Add unit tests for cross-tab LWW conflict ordering with deterministic per-entity tie-break behavior in `/home/kush/researchlm/tests/unit/persistence/conflict-ordering.test.ts`
+- [X] T102 [P] [US4] Add unit tests for encrypted credential lifecycle transitions and request-gating outcomes in `/home/kush/researchlm/tests/unit/persistence/credential-lifecycle.test.ts`
+- [X] T103 [P] [US4] Add integration test for autosave and resume flow in `/home/kush/researchlm/tests/integration/persistence/workspace-resume.test.tsx`
+- [X] T104 [P] [US4] Add integration test for export/import recovery fidelity in `/home/kush/researchlm/tests/integration/persistence/workspace-backup-restore.test.tsx`
+- [X] T105 [P] [US4] Add integration test for visible conflict notification rendering in `/home/kush/researchlm/tests/integration/persistence/cross-tab-conflict-notice.test.tsx`
+- [X] T106 [US4] Add e2e acceptance for resume/backup/conflict journey in `/home/kush/researchlm/tests/e2e/us4-session-resume.spec.ts`
 
 ### Implementation for User Story 4
 
-- [ ] T107 [P] [US4] Implement adaptive snapshot scheduling and snapshot persistence in `/home/kush/researchlm/features/persistence/workspace-persistence-service.ts`
-- [ ] T108 [P] [US4] Implement backup export bundle creation with checksums in `/home/kush/researchlm/features/persistence/workspace-backup.ts`
-- [ ] T109 [P] [US4] Implement backup import validation and transactional restore in `/home/kush/researchlm/features/persistence/workspace-backup.ts`
-- [ ] T110 [P] [US4] Implement cross-tab channel and LWW reconciliation flow with per-entity deterministic tie-break and referential-integrity preservation in `/home/kush/researchlm/features/persistence/cross-tab-sync.ts`
-- [ ] T111 [P] [US4] Implement conflict event persistence and deduplication in `/home/kush/researchlm/features/persistence/conflict-events.ts`
-- [ ] T112 [US4] Implement workspace conflict notice component in `/home/kush/researchlm/components/workspace/persistence/conflict-notice.tsx`
-- [ ] T113 [US4] Implement recovery actions UI (snapshot/export/import) in `/home/kush/researchlm/components/workspace/provider-settings/persistence-status.tsx`
-- [ ] T114 [US4] Implement credential save/replace/revoke UX flows in `/home/kush/researchlm/components/workspace/provider-settings/provider-credentials-form.tsx`
-- [ ] T115 [US4] Enforce credential preflight before adapter dispatch with explicit `auth`/`permission` categorization and no auto-retry in `/home/kush/researchlm/app/api/llm/stream/route.ts`
-- [ ] T116 [US4] Persist retry attempt context (selection + inspector draft refs) in `/home/kush/researchlm/features/persistence/repository.ts`
-- [ ] T117 [US4] Emit structured local logs for generation/persistence/conflict domains using FR-019 prohibited-field redaction baseline in `/home/kush/researchlm/features/persistence/workspace-persistence-service.ts`
-- [ ] T118 [US4] Validate actionable non-blocking conflict/retry copy in `/home/kush/researchlm/components/workspace/persistence/conflict-notice.tsx`
+- [X] T107 [P] [US4] Implement adaptive snapshot scheduling and snapshot persistence in `/home/kush/researchlm/features/persistence/workspace-persistence-service.ts`
+- [X] T108 [P] [US4] Implement backup export bundle creation with checksums in `/home/kush/researchlm/features/persistence/workspace-backup.ts`
+- [X] T109 [P] [US4] Implement backup import validation and transactional restore in `/home/kush/researchlm/features/persistence/workspace-backup.ts`
+- [X] T110 [P] [US4] Implement cross-tab channel and LWW reconciliation flow with per-entity deterministic tie-break and referential-integrity preservation in `/home/kush/researchlm/features/persistence/cross-tab-sync.ts`
+- [X] T111 [P] [US4] Implement conflict event persistence and deduplication in `/home/kush/researchlm/features/persistence/conflict-events.ts`
+- [X] T112 [US4] Implement workspace conflict notice component in `/home/kush/researchlm/components/workspace/persistence/conflict-notice.tsx`
+- [X] T113 [US4] Implement recovery actions UI (snapshot/export/import) in `/home/kush/researchlm/components/workspace/provider-settings/persistence-status.tsx`
+- [X] T114 [US4] Implement credential save/replace/revoke UX flows in `/home/kush/researchlm/components/workspace/provider-settings/provider-credentials-form.tsx`
+- [X] T115 [US4] Enforce credential preflight before adapter dispatch with explicit `auth`/`permission` categorization and no auto-retry in `/home/kush/researchlm/app/api/llm/stream/route.ts`
+- [X] T116 [US4] Persist retry attempt context (selection + inspector draft refs) in `/home/kush/researchlm/features/persistence/repository.ts`
+- [X] T117 [US4] Emit structured local logs for generation/persistence/conflict domains using FR-019 prohibited-field redaction baseline in `/home/kush/researchlm/features/persistence/workspace-persistence-service.ts`
+- [X] T118 [US4] Validate actionable non-blocking conflict/retry copy in `/home/kush/researchlm/components/workspace/persistence/conflict-notice.tsx`
 
 **Checkpoint**: US4 is independently functional and testable.
 
@@ -225,39 +225,39 @@
 
 **Purpose**: Final compliance hardening for contracts, accessibility, performance budgets, and release evidence.
 
-- [ ] T119 [P] Add workspace UI contract regression tests in `/home/kush/researchlm/tests/contract/workspace-ui.contract.test.ts`
-- [ ] T120 [P] Add retry context and error-taxonomy contract tests in `/home/kush/researchlm/tests/contract/llm-stream-retry.contract.test.ts`
-- [ ] T121 [P] Add p95 node interaction budget integration test in `/home/kush/researchlm/tests/integration/performance/node-interaction-budget.test.ts`
-- [ ] T122 [P] Add p95 hierarchy/canvas switch budget integration test in `/home/kush/researchlm/tests/integration/performance/view-switch-budget.test.ts`
-- [ ] T123 [P] Add generation first-visible-content budget integration test in `/home/kush/researchlm/tests/integration/performance/generation-latency-budget.test.ts`
-- [ ] T124 [P] Add e2e accessibility test for deterministic pane focus order in `/home/kush/researchlm/tests/e2e/a11y-pane-focus-order.spec.ts`
-- [ ] T125 Add integration test for WCAG AA node label/state contrast checks in `/home/kush/researchlm/tests/integration/workspace/node-contrast-aa.test.tsx`
-- [ ] T126 Add integration regression for non-blocking editability during retry in `/home/kush/researchlm/tests/integration/workspace/retry-nonblocking-editing.test.tsx`
-- [ ] T127 Add CI workflow for lint/format/typecheck/test/build/e2e gates in `/home/kush/researchlm/.github/workflows/quality-gates.yml`
-- [ ] T128 Add CI workflow for performance gate execution and artifact upload in `/home/kush/researchlm/.github/workflows/performance-gates.yml`
-- [ ] T129 Update quickstart with final verification commands and evidence checklist in `/home/kush/researchlm/specs/001-build-sensecape-app/quickstart.md`
-- [ ] T130 Update feature notes with documented interaction-model divergences in `/home/kush/researchlm/specs/001-build-sensecape-app/feature-notes.md`
-- [ ] T131 Record full verification run outputs in `/home/kush/researchlm/specs/001-build-sensecape-app/checklists/requirements.md`
-- [ ] T132 Add constitution compliance sign-off checklist for review in `/home/kush/researchlm/specs/001-build-sensecape-app/checklists/requirements.md`
-- [ ] T133 [P] Define generation failure notice contract fields in `/home/kush/researchlm/features/generation/failure-notice-contract.ts`
-- [ ] T134 [P] Define conflict-notice lifecycle policy (persist/dismiss/replace) in `/home/kush/researchlm/features/persistence/conflict-notice-policy.ts`
-- [ ] T135 [P] Add integration test for non-blocking generation failure notice fields in `/home/kush/researchlm/tests/integration/workspace/generation-failure-notice.test.tsx`
-- [ ] T136 [P] Add integration test for partial backup restore summary semantics in `/home/kush/researchlm/tests/integration/persistence/partial-restore-summary.test.tsx`
-- [ ] T137 Add e2e recovery-required fallback flow for unreadable workspace state in `/home/kush/researchlm/tests/e2e/us4-recovery-required.spec.ts`
-- [ ] T138 Add SC-004/SC-005 evaluation protocol (participant sampling, baseline method, and analysis steps) in `/home/kush/researchlm/specs/001-build-sensecape-app/measurement-protocol.md`
-- [ ] T139 [P] Add unit tests for pane-layout persistence and width bounds in `/home/kush/researchlm/tests/unit/graph-model/pane-layout-state.test.ts`
-- [ ] T140 [P] Add integration test for credential revocation/replacement effects on new, in-flight, and retry requests in `/home/kush/researchlm/tests/integration/workspace/credential-lifecycle-generation.test.tsx`
-- [ ] T141 [P] Add integration test for auth/permission-specific failure notices and credential-action routing in `/home/kush/researchlm/tests/integration/workspace/auth-failure-routing.test.tsx`
-- [ ] T142 [P] Add integration accessibility test for focus restoration after modal/popover/panel closure in `/home/kush/researchlm/tests/integration/workspace/focus-restoration.test.tsx`
-- [ ] T143 Update measurement protocol with performance run metadata schema, FR-033 item-based uniqueness ratio formulas/defaults, and policy ownership/change-control rules in `/home/kush/researchlm/specs/001-build-sensecape-app/measurement-protocol.md`
-- [ ] T144 [P] Add requirement-to-task traceability matrix mapping FR/NFR IDs to task IDs in `/home/kush/researchlm/specs/001-build-sensecape-app/traceability.md`
-- [ ] T145 Add traceability completeness check (all FR/NFR mapped) to review checklist in `/home/kush/researchlm/specs/001-build-sensecape-app/checklists/requirements.md`
-- [ ] T146 [P] Consolidate existing expansion output validators into a shared output-form and quality-validation contract module in `/home/kush/researchlm/features/generation/output-contract.ts`
-- [ ] T147 Add unit tests for shared expansion output quality guards (empty/repetitive/off-topic/malformed) and notice action handling (retry/change-action/dismiss) in `/home/kush/researchlm/tests/unit/generation/output-quality-guard.test.ts`
-- [ ] T148 [P] Add integration test for generated-subtopic candidate lifecycle persistence across reload in `/home/kush/researchlm/tests/integration/workspace/subtopic-candidate-lifecycle.test.tsx`
-- [ ] T149 [P] Add integration test for unsupported viewport editing-disable and guidance messaging in `/home/kush/researchlm/tests/integration/workspace/unsupported-viewport-guidance.test.tsx`
-- [ ] T150 Extract a shared structured-log redaction taxonomy policy and migrate log emitters to it in `/home/kush/researchlm/lib/logging/redaction-policy.ts`
-- [ ] T151 Add unit tests for shared structured-log redaction prohibited-field handling in `/home/kush/researchlm/tests/unit/persistence/log-redaction-policy.test.ts`
+- [X] T119 [P] Add workspace UI contract regression tests in `/home/kush/researchlm/tests/contract/workspace-ui.contract.test.tsx`
+- [X] T120 [P] Add retry context and error-taxonomy contract tests in `/home/kush/researchlm/tests/contract/llm-stream-retry.contract.test.ts`
+- [X] T121 [P] Add p95 node interaction budget integration test in `/home/kush/researchlm/tests/integration/performance/node-interaction-budget.test.ts`
+- [X] T122 [P] Add p95 hierarchy/canvas switch budget integration test in `/home/kush/researchlm/tests/integration/performance/view-switch-budget.test.ts`
+- [X] T123 [P] Add generation first-visible-content budget integration test in `/home/kush/researchlm/tests/integration/performance/generation-latency-budget.test.ts`
+- [X] T124 [P] Add e2e accessibility test for deterministic pane focus order in `/home/kush/researchlm/tests/e2e/a11y-pane-focus-order.spec.ts`
+- [X] T125 Add integration test for WCAG AA node label/state contrast checks in `/home/kush/researchlm/tests/integration/workspace/node-contrast-aa.test.tsx`
+- [X] T126 Add integration regression for non-blocking editability during retry in `/home/kush/researchlm/tests/integration/workspace/retry-nonblocking-editing.test.tsx`
+- [X] T127 Add CI workflow for lint/format/typecheck/test/build/e2e gates in `/home/kush/researchlm/.github/workflows/quality-gates.yml`
+- [X] T128 Add CI workflow for performance gate execution and artifact upload in `/home/kush/researchlm/.github/workflows/performance-gates.yml`
+- [X] T129 Update quickstart with final verification commands and evidence checklist in `/home/kush/researchlm/specs/001-build-sensecape-app/quickstart.md`
+- [X] T130 Update feature notes with documented interaction-model divergences in `/home/kush/researchlm/specs/001-build-sensecape-app/feature-notes.md`
+- [X] T131 Record full verification run outputs in `/home/kush/researchlm/specs/001-build-sensecape-app/checklists/requirements.md`
+- [X] T132 Add constitution compliance sign-off checklist for review in `/home/kush/researchlm/specs/001-build-sensecape-app/checklists/requirements.md`
+- [X] T133 [P] Define generation failure notice contract fields in `/home/kush/researchlm/features/generation/failure-notice-contract.ts`
+- [X] T134 [P] Define conflict-notice lifecycle policy (persist/dismiss/replace) in `/home/kush/researchlm/features/persistence/conflict-notice-policy.ts`
+- [X] T135 [P] Add integration test for non-blocking generation failure notice fields in `/home/kush/researchlm/tests/integration/workspace/generation-failure-notice.test.tsx`
+- [X] T136 [P] Add integration test for partial backup restore summary semantics in `/home/kush/researchlm/tests/integration/persistence/partial-restore-summary.test.tsx`
+- [X] T137 Add e2e recovery-required fallback flow for unreadable workspace state in `/home/kush/researchlm/tests/e2e/us4-recovery-required.spec.ts`
+- [X] T138 Add SC-004/SC-005 evaluation protocol (participant sampling, baseline method, and analysis steps) in `/home/kush/researchlm/specs/001-build-sensecape-app/measurement-protocol.md`
+- [X] T139 [P] Add unit tests for pane-layout persistence and width bounds in `/home/kush/researchlm/tests/unit/graph-model/pane-layout-state.test.ts`
+- [X] T140 [P] Add integration test for credential revocation/replacement effects on new, in-flight, and retry requests in `/home/kush/researchlm/tests/integration/workspace/credential-lifecycle-generation.test.tsx`
+- [X] T141 [P] Add integration test for auth/permission-specific failure notices and credential-action routing in `/home/kush/researchlm/tests/integration/workspace/auth-failure-routing.test.tsx`
+- [X] T142 [P] Add integration accessibility test for focus restoration after modal/popover/panel closure in `/home/kush/researchlm/tests/integration/workspace/focus-restoration.test.tsx`
+- [X] T143 Update measurement protocol with performance run metadata schema, FR-033 item-based uniqueness ratio formulas/defaults, and policy ownership/change-control rules in `/home/kush/researchlm/specs/001-build-sensecape-app/measurement-protocol.md`
+- [X] T144 [P] Add requirement-to-task traceability matrix mapping FR/NFR IDs to task IDs in `/home/kush/researchlm/specs/001-build-sensecape-app/traceability.md`
+- [X] T145 Add traceability completeness check (all FR/NFR mapped) to review checklist in `/home/kush/researchlm/specs/001-build-sensecape-app/checklists/requirements.md`
+- [X] T146 [P] Consolidate existing expansion output validators into a shared output-form and quality-validation contract module in `/home/kush/researchlm/features/generation/output-contract.ts`
+- [X] T147 Add unit tests for shared expansion output quality guards (empty/repetitive/off-topic/malformed) and notice action handling (retry/change-action/dismiss) in `/home/kush/researchlm/tests/unit/generation/output-quality-guard.test.ts`
+- [X] T148 [P] Add integration test for generated-subtopic candidate lifecycle persistence across reload in `/home/kush/researchlm/tests/integration/workspace/subtopic-candidate-lifecycle.test.tsx`
+- [X] T149 [P] Add integration test for unsupported viewport editing-disable and guidance messaging in `/home/kush/researchlm/tests/integration/workspace/unsupported-viewport-guidance.test.tsx`
+- [X] T150 Extract a shared structured-log redaction taxonomy policy and migrate log emitters to it in `/home/kush/researchlm/lib/logging/redaction-policy.ts`
+- [X] T151 Add unit tests for shared structured-log redaction prohibited-field handling in `/home/kush/researchlm/tests/unit/persistence/log-redaction-policy.test.ts`
 
 ---
 

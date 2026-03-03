@@ -1,4 +1,4 @@
-type StoredCredential = {
+export type StoredCredential = {
   id: string
   provider: string
   authType: "api-key" | "oauth"
@@ -81,6 +81,13 @@ export function getActiveCredentialByProvider(provider: string): StoredCredentia
   return Array.from(memoryStore.values()).find((item) => item.provider === provider && item.status === "active")
 }
 
+export function listCredentials(provider?: string): StoredCredential[] {
+  const credentials = Array.from(memoryStore.values())
+  return credentials
+    .filter((credential) => (provider ? credential.provider === provider : true))
+    .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
+}
+
 export function replaceCredential(id: string, rawValue: string): StoredCredential | undefined {
   const current = memoryStore.get(id)
   if (!current) {
@@ -129,4 +136,11 @@ export function revokeCredential(id: string): StoredCredential | undefined {
   memoryStore.set(id, next)
   persist()
   return next
+}
+
+export function clearCredentialsForTests(): void {
+  memoryStore.clear()
+  if (typeof window !== "undefined") {
+    window.localStorage.removeItem(STORAGE_KEY)
+  }
 }

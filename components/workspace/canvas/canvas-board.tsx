@@ -183,6 +183,14 @@ export function CanvasBoard() {
         />
         {generation.error ? <p className="text-xs text-red-600">{generation.error}</p> : null}
         {generation.qualityNotice ? <p className="text-xs text-amber-700">{generation.qualityNotice}</p> : null}
+        {generation.failureNotice ? (
+          <div className="rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs text-amber-900" role="status">
+            <p>
+              {generation.failureNotice.category}: {generation.failureNotice.message}
+            </p>
+            <p>Actions: {generation.failureNotice.actions.join(" / ")}</p>
+          </div>
+        ) : null}
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">

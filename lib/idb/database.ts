@@ -1,6 +1,7 @@
 import type { Canvas, Connection, GraphNode, HierarchyLink, Workspace } from "@/features/graph-model/types"
 import type { GenerationAttempt, LocalGenerationLog } from "@/features/generation/types"
 import type { GeneratedSubtopicCandidate } from "@/features/hierarchy-model/state"
+import type { ConflictEventRecord, RetryContextRecord, WorkspaceSnapshotRecord } from "@/features/persistence/repository"
 
 type GenerationRequestRecord = {
   id: string
@@ -13,7 +14,7 @@ type GenerationRequestRecord = {
 }
 
 export const DB_NAME = "sensecape"
-export const DB_VERSION = 1
+export const DB_VERSION = 2
 
 type Stores = {
   workspaces: Workspace
@@ -22,6 +23,9 @@ type Stores = {
   connections: Connection
   hierarchyLinks: HierarchyLink
   generatedSubtopicCandidates: GeneratedSubtopicCandidate
+  snapshots: WorkspaceSnapshotRecord
+  retryContexts: RetryContextRecord
+  conflictEvents: ConflictEventRecord
   generationRequests: GenerationRequestRecord
   generationAttempts: GenerationAttempt
   localLogs: LocalGenerationLog
@@ -35,6 +39,9 @@ const STORE_NAMES: Array<keyof Stores> = [
   "connections",
   "hierarchyLinks",
   "generatedSubtopicCandidates",
+  "snapshots",
+  "retryContexts",
+  "conflictEvents",
   "generationRequests",
   "generationAttempts",
   "localLogs",

@@ -29,6 +29,7 @@ export interface GenerationAttempt {
   requestId: string
   attemptNumber: number
   triggerType: "initial" | "manual-retry"
+  retryContextId?: string
   status: GenerationStatus
   createdAt: string
   completedAt?: string

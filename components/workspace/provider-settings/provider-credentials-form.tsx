@@ -2,14 +2,28 @@
 
 import React, { useState } from "react"
 
-type Props = {
-  onSave: (value: { provider: string; type: "api-key" | "oauth"; credential: string }) => void
+type CredentialSummary = {
+  id: string
+  provider: string
+  status: "active" | "invalid" | "revoked"
+  updatedAt: string
 }
 
-export function ProviderCredentialsForm({ onSave }: Props) {
+type Props = {
+  onSave: (value: { provider: string; type: "api-key" | "oauth"; credential: string }) => void
+  onReplace?: (value: { credentialId: string; credential: string }) => void
+  onRevoke?: (credentialId: string) => void
+  credentials?: CredentialSummary[]
+}
+
+export function ProviderCredentialsForm({ onSave, onReplace, onRevoke, credentials = [] }: Props) {
   const [provider, setProvider] = useState("openai")
   const [type, setType] = useState<"api-key" | "oauth">("api-key")
   const [credential, setCredential] = useState("")
+  const [replacementCredential, setReplacementCredential] = useState("")
+  const [selectedCredentialId, setSelectedCredentialId] = useState<string>("")
+  const [showSavedCredentials, setShowSavedCredentials] = useState(true)
+  const savedCredentialsTriggerRef = React.useRef<HTMLButtonElement>(null)
 
   return (
     <form
@@ -45,6 +59,91 @@ export function ProviderCredentialsForm({ onSave }: Props) {
       <button type="submit" className="rounded border px-2 py-1 text-xs">
         Save credential
       </button>
+
+      {credentials.length > 0 ? (
+        <section className="space-y-2 rounded border border-[hsl(var(--border))] p-2">
+          <button
+            ref={savedCredentialsTriggerRef}
+            type="button"
+            className="rounded border px-2 py-1 text-xs"
+            onClick={() => setShowSavedCredentials((current) => !current)}
+          >
+            {showSavedCredentials ? "Hide saved credentials" : "Manage saved credentials"}
+          </button>
+
+          {showSavedCredentials ? (
+            <div className="space-y-2" role="region" aria-label="Saved credentials panel">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-600">Saved credentials</p>
+              <ul className="space-y-1">
+                {credentials.map((item) => (
+                  <li key={item.id} className="flex items-center justify-between gap-2 rounded bg-slate-50 px-2 py-1 text-xs">
+                    <span>
+                      {item.provider} ({item.status})
+                    </span>
+                    <button
+                      type="button"
+                      className="rounded border px-2 py-0.5"
+                      onClick={() => setSelectedCredentialId(item.id)}
+                    >
+                      Select
+                    </button>
+                  </li>
+                ))}
+              </ul>
+
+              <input
+                type="password"
+                value={replacementCredential}
+                onChange={(event) => setReplacementCredential(event.target.value)}
+                className="w-full rounded border p-1 text-xs"
+                placeholder="Replacement credential value"
+              />
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className="rounded border px-2 py-1 text-xs"
+                  disabled={!selectedCredentialId || !replacementCredential}
+                  onClick={() => {
+                    if (!selectedCredentialId || !replacementCredential || !onReplace) {
+                      return
+                    }
+                    onReplace({ credentialId: selectedCredentialId, credential: replacementCredential })
+                    setReplacementCredential("")
+                  }}
+                >
+                  Replace selected
+                </button>
+                <button
+                  type="button"
+                  className="rounded border px-2 py-1 text-xs"
+                  disabled={!selectedCredentialId}
+                  onClick={() => {
+                    if (!selectedCredentialId || !onRevoke) {
+                      return
+                    }
+                    onRevoke(selectedCredentialId)
+                  }}
+                >
+                  Revoke selected
+                </button>
+                <button
+                  type="button"
+                  className="rounded border px-2 py-1 text-xs"
+                  onClick={() => {
+                    setShowSavedCredentials(false)
+                    requestAnimationFrame(() => {
+                      savedCredentialsTriggerRef.current?.focus()
+                    })
+                  }}
+                >
+                  Close panel
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
     </form>
   )
 }

@@ -79,6 +79,27 @@ Implement a desktop-first Sensecape experience with:
 - `npm run test:e2e`
 - constitution compliance check across spec/plan/tasks
 
+## Final Verification Runbook
+
+Run these commands in order and capture pass/fail output for release evidence:
+
+1. `npm run format:check`
+2. `npm run lint`
+3. `npm run typecheck`
+4. `npm run test`
+5. `npm run build`
+6. `npm run test:e2e`
+
+Record artifacts from each run in release notes (command, timestamp, result, and any warnings).
+
+### Evidence Checklist
+
+- Include p95 performance test outputs for node interaction, hierarchy switch, and generation first-visible-content.
+- Include unit/integration/contract/e2e test summary counts.
+- Include screenshots or logs for conflict notice, backup export/import, and retry-context persistence.
+- Include confirmation that auth/permission preflight failures are non-retryable.
+- Include constitution sign-off update in `checklists/requirements.md`.
+
 ## Constitution Quality Checklist
 
 - Code quality evidence includes lint, format check, and static analysis outputs.

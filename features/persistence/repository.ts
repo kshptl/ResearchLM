@@ -1,6 +1,7 @@
 import { openDatabase } from "@/lib/idb/database"
 import type { GenerationAttempt, LocalGenerationLog } from "@/features/generation/types"
 import type { HierarchyLink } from "@/features/graph-model/types"
+import type { RetryContextSnapshot } from "@/features/generation/retry-context"
 import type { GeneratedSubtopicCandidate } from "@/features/hierarchy-model/state"
 
 type GenerationRequestRecord = {
@@ -11,6 +12,35 @@ type GenerationRequestRecord = {
   status: string
   createdAt: string
   updatedAt: string
+}
+
+export type WorkspaceSnapshotRecord = {
+  id: string
+  workspaceId: string
+  reason: "autosave" | "manual" | "before-import"
+  payload: Record<string, unknown>
+  commandCount: number
+  createdAt: string
+}
+
+export type RetryContextRecord = {
+  id: string
+  requestId: string
+  workspaceId: string
+  snapshot: RetryContextSnapshot
+  createdAt: string
+}
+
+export type ConflictEventRecord = {
+  id: string
+  workspaceId: string
+  entityType: string
+  entityId: string
+  localUpdatedAt: string
+  remoteUpdatedAt: string
+  resolution: "local" | "remote"
+  summary: string
+  createdAt: string
 }
 
 const memoryFallback = new Map<string, Map<string, unknown>>()
@@ -125,5 +155,30 @@ export const persistenceRepository = {
   async loadGeneratedSubtopicCandidates(workspaceId: string): Promise<GeneratedSubtopicCandidate[]> {
     const all = await getAllRecords<GeneratedSubtopicCandidate>("generatedSubtopicCandidates")
     return all.filter((candidate) => candidate.workspaceId === workspaceId)
+  },
+  async saveWorkspaceSnapshot(record: WorkspaceSnapshotRecord): Promise<void> {
+    await putRecord("snapshots", record)
+  },
+  async loadWorkspaceSnapshots(workspaceId: string): Promise<WorkspaceSnapshotRecord[]> {
+    const all = await getAllRecords<WorkspaceSnapshotRecord>("snapshots")
+    return all
+      .filter((snapshot) => snapshot.workspaceId === workspaceId)
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+  },
+  async saveRetryContext(record: RetryContextRecord): Promise<void> {
+    await putRecord("retryContexts", record)
+  },
+  async loadRetryContext(requestId: string): Promise<RetryContextRecord | undefined> {
+    const all = await getAllRecords<RetryContextRecord>("retryContexts")
+    return all.find((entry) => entry.requestId === requestId)
+  },
+  async saveConflictEvent(record: ConflictEventRecord): Promise<void> {
+    await putRecord("conflictEvents", record)
+  },
+  async loadConflictEvents(workspaceId: string): Promise<ConflictEventRecord[]> {
+    const all = await getAllRecords<ConflictEventRecord>("conflictEvents")
+    return all
+      .filter((event) => event.workspaceId === workspaceId)
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
   }
 }

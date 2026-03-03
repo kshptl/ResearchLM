@@ -1,5 +1,6 @@
 "use client"
 
+import React from "react"
 import { useEffect, useState, type ReactNode } from "react"
 import { WorkspaceShell } from "@/components/workspace/layout/workspace-shell"
 

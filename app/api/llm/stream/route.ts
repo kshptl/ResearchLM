@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
 import type { GenerationRequest } from "@/features/generation/types"
-import { assertByokPolicy } from "@/lib/auth/byok-policy"
+import { assertByokPolicy, CredentialPreflightError } from "@/lib/auth/byok-policy"
 import { getProviderAdapter } from "@/lib/providers/registry"
 import { assertMonotonicSequence, encodeSseEvent, encodeSsePing } from "@/lib/sse/events"
 import { toErrorEnvelope } from "@/lib/sse/error-envelope"
@@ -41,7 +41,22 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     const payload = parsed.data as GenerationRequest
-    assertByokPolicy(payload)
+    try {
+      assertByokPolicy(payload)
+    } catch (error) {
+      if (error instanceof CredentialPreflightError) {
+        return NextResponse.json(
+          {
+            category: error.category,
+            message: error.message,
+            retryable: false,
+            requestId
+          },
+          { status: error.category === "auth" ? 401 : 403 }
+        )
+      }
+      throw error
+    }
 
     const adapter = getProviderAdapter(payload.provider)
 
@@ -84,6 +99,14 @@ export async function POST(request: Request): Promise<Response> {
     })
   } catch (error) {
     const envelope = toErrorEnvelope(error, requestId)
-    return NextResponse.json(envelope, { status: envelope.category === "auth" ? 401 : 500 })
+    const status =
+      envelope.category === "auth"
+        ? 401
+        : envelope.category === "permission"
+          ? 403
+          : envelope.category === "invalid_request"
+            ? 400
+            : 500
+    return NextResponse.json(envelope, { status })
   }
 }

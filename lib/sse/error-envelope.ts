@@ -21,6 +21,10 @@ export interface ErrorEnvelope {
 }
 
 export function toErrorEnvelope(error: unknown, requestId?: string): ErrorEnvelope {
+  if (error instanceof Error && /permission|forbidden|not allowed|access denied/i.test(error.message)) {
+    return { category: "permission", message: error.message, retryable: false, requestId }
+  }
+
   if (error instanceof Error && /credential|token|auth/i.test(error.message)) {
     return { category: "auth", message: error.message, retryable: false, requestId }
   }
