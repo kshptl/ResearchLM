@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useMemo } from "react"
 import type { ReactNode } from "react"
 
 type WorkspaceShellProps = {
@@ -19,12 +19,19 @@ export function WorkspaceShell({
   const leftClass = leftCollapsed ? "hidden" : "block"
   const rightClass = rightCollapsed ? "hidden" : "block"
 
+  const gridCols = useMemo(() => {
+    if (leftCollapsed && rightCollapsed) return "lg:grid-cols-[minmax(0,1fr)]"
+    if (leftCollapsed) return "lg:grid-cols-[minmax(0,1fr)_320px]"
+    if (rightCollapsed) return "lg:grid-cols-[280px_minmax(0,1fr)]"
+    return "lg:grid-cols-[280px_minmax(0,1fr)_320px]"
+  }, [leftCollapsed, rightCollapsed])
+
   return (
-    <section className="grid min-h-[70vh] grid-cols-1 gap-4 lg:grid-cols-[280px_minmax(0,1fr)_320px]">
+    <section className={`grid h-[calc(100vh-6rem)] grid-cols-1 gap-4 ${gridCols}`}>
       <aside className={`${leftClass} workspace-pane rounded-md p-3`} aria-label="Hierarchy pane">
         {leftPane}
       </aside>
-      <main className="workspace-pane rounded-md p-3" aria-label="Canvas pane">
+      <main className="workspace-pane flex flex-col overflow-hidden rounded-md" aria-label="Canvas pane">
         {centerPane}
       </main>
       <aside className={`${rightClass} workspace-pane rounded-md p-3`} aria-label="Inspector pane">

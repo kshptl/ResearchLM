@@ -7,11 +7,11 @@ import { assertMonotonicSequence, encodeSseEvent, encodeSsePing } from "@/lib/ss
 import { toErrorEnvelope } from "@/lib/sse/error-envelope"
 
 const requestSchema = z.object({
-  provider: z.enum(["openai", "anthropic", "gemini", "openrouter", "github-models"]),
+  provider: z.enum(["openai", "anthropic", "gemini", "openrouter", "github-models", "bedrock"]),
   model: z.string().min(1),
-  intent: z.enum(["prompt", "explain", "questions", "subtopics"]),
+  intent: z.enum(["prompt", "explain", "questions", "subtopics", "summarize"]),
   messages: z.array(z.object({ role: z.enum(["system", "user", "assistant", "tool"]), content: z.string().min(1) })).min(1),
-  auth: z.object({ type: z.enum(["api-key", "oauth"]), credential: z.string().min(1) }),
+  auth: z.object({ type: z.enum(["api-key", "oauth", "aws-profile"]), credential: z.string().min(1) }),
   workspaceContext: z
     .object({
       workspaceId: z.string().optional(),

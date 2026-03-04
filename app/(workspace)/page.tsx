@@ -297,14 +297,28 @@ export default function WorkspacePage() {
     })
   }
 
+  const [settingsOpen, setSettingsOpen] = useState(false)
+
   return (
-    <section className="mx-auto max-w-6xl space-y-4">
-      <header className="rounded-md border border-[hsl(var(--border))] bg-white p-4">
-        <h1 className="text-xl font-semibold">{title}</h1>
-        <p className="text-sm text-slate-600">Local-first multilevel exploration and sensemaking.</p>
-      </header>
+    <div className="relative h-full">
+      {/* Canvas is the full-bleed background layer */}
+      <div className="absolute inset-0">
+        <CanvasBoard onOpenSettings={() => setSettingsOpen(true)} />
+      </div>
+
+      {/* Always-visible settings trigger */}
+      <button
+        type="button"
+        className="absolute right-3 top-3 z-20 rounded-lg border border-[hsl(var(--border))] bg-white/95 p-2 shadow-lg backdrop-blur-sm hover:bg-slate-50"
+        onClick={() => setSettingsOpen(true)}
+        aria-label="Open settings"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      </button>
+
+      {/* Recovery banner */}
       {recoveryRequired ? (
-        <section className="rounded-md border border-red-300 bg-red-50 p-3 text-xs text-red-800" role="alert">
+        <div className="absolute inset-x-0 top-0 z-20 border-b border-red-300 bg-red-50 px-3 py-2 text-xs text-red-800" role="alert">
           <p className="font-semibold">Recovery required</p>
           <p>Workspace state could not be loaded. Reset local state or import a trusted backup.</p>
           <div className="mt-2 flex gap-2">
@@ -336,148 +350,101 @@ export default function WorkspacePage() {
               Try backup import
             </button>
           </div>
-        </section>
+        </div>
       ) : null}
-      <div className="grid gap-4 md:grid-cols-[2fr_1fr]">
-        <div className="rounded-md border border-[hsl(var(--border))] bg-white p-4">
-          <HierarchyControls
-            onAddBroadTopic={() => {
-              const now = new Date().toISOString()
-              const canvas: Canvas = {
-                id: crypto.randomUUID(),
-                workspaceId: "local-workspace",
-                topic: "Broad Topic",
-                depth: 0,
-                createdAt: now,
-                updatedAt: now
-              }
-              setCanvases((current) => [...current, canvas])
-            }}
-            onAddSubtopic={() => {
-              if (!activeCanvas) {
+
+      {/* Settings drawer */}
+      {settingsOpen ? (
+        <div className="absolute inset-0 z-30 flex">
+          <div className="flex-1" onClick={() => setSettingsOpen(false)} />
+          <aside className="w-80 overflow-y-auto border-l border-[hsl(var(--border))] bg-white p-4 shadow-2xl" aria-label="Settings">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-sm font-semibold">{title}</h2>
+              <button type="button" className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600" onClick={() => setSettingsOpen(false)}>
+                <svg width="16" height="16" viewBox="0 0 14 14" fill="none"><path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <section>
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Hierarchy</h3>
+                <HierarchyControls
+                  onAddBroadTopic={() => {
+                    const now = new Date().toISOString()
+                    const canvas: Canvas = { id: crypto.randomUUID(), workspaceId: "local-workspace", topic: "Broad Topic", depth: 0, createdAt: now, updatedAt: now }
+                    setCanvases((current) => [...current, canvas])
+                  }}
+                  onAddSubtopic={() => {
+                    if (!activeCanvas) return
+                    const child = createChildCanvas(activeCanvas, `Subtopic ${canvases.length}`)
+                    setCanvases((current) => [...current, child])
+                    setLinks((current) => {
+                      const link: HierarchyLink = { id: crypto.randomUUID(), workspaceId: activeCanvas.workspaceId, parentCanvasId: activeCanvas.id, childCanvasId: child.id, linkType: "subtopic", createdAt: new Date().toISOString() }
+                      void persistenceRepository.saveHierarchyLink(link)
+                      return [...current, link]
+                    })
+                  }}
+                  onAddSibling={() => {
+                    const now = new Date().toISOString()
+                    setCanvases((current) => [...current, { id: crypto.randomUUID(), workspaceId: "local-workspace", topic: "Sibling Topic", depth: activeCanvas?.depth ?? 0, parentCanvasId: activeCanvas?.parentCanvasId, createdAt: now, updatedAt: now }])
+                    const candidate: GeneratedSubtopicCandidate = { id: crypto.randomUUID(), workspaceId: "local-workspace", parentCanvasId: activeCanvas?.id ?? "root", label: `Sibling candidate ${canvases.length}`, lifecycle: "presented", createdAt: now, updatedAt: now }
+                    setCandidates((current) => { const next = upsertSubtopicCandidate(current, candidate); void persistenceRepository.saveGeneratedSubtopicCandidate(candidate); return next })
+                  }}
+                />
+                <div className="mt-2">
+                  <HierarchyView canvases={canvases} links={links} activeCanvasId={navigation.activeCanvasId} onSelectCanvas={(id) => setNavigation((current) => synchronizeHierarchySelection(current, id))} />
+                </div>
+                <div className="mt-2">
+                  <SubtopicCandidatePicker
+                    candidates={candidatesForCanvas(candidates, navigation.activeCanvasId)}
+                    onSelect={(candidateId) => { setCandidates((current) => { const next = setSubtopicCandidateLifecycle(current, candidateId, "selected"); const changed = next.find((c) => c.id === candidateId); if (changed) void persistenceRepository.saveGeneratedSubtopicCandidate(changed); return next }) }}
+                    onDismiss={(candidateId) => { setCandidates((current) => { const next = setSubtopicCandidateLifecycle(current, candidateId, "dismissed"); const changed = next.find((c) => c.id === candidateId); if (changed) void persistenceRepository.saveGeneratedSubtopicCandidate(changed); return next }) }}
+                  />
+                </div>
+              </section>
+
+              <section>
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Provider Credentials</h3>
+                <ProviderCredentialsForm
+                  onSave={({ provider, type, credential }) => { saveCredential(provider, type, credential); refreshCredentials(); setPersistenceStatus("idle") }}
+                  onReplace={({ credentialId, credential }) => { replaceCredential(credentialId, credential); refreshCredentials() }}
+                  onRevoke={(credentialId) => { revokeCredential(credentialId); refreshCredentials() }}
+                  credentials={credentials}
+                />
+              </section>
+
+              <section>
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Persistence</h3>
+                <PersistenceStatus
+                  status={persistenceStatus}
+                  onRetry={() => setPersistenceStatus("saving")}
+                  onSnapshotNow={() => void handleSnapshotNow()}
+                  onExportBackup={() => void handleExportBackup()}
+                  onImportBackup={() => void handleImportBackup()}
+                  onSimulateConflict={() => void handleSimulateConflict()}
+                />
+              </section>
+            </div>
+          </aside>
+        </div>
+      ) : null}
+
+      {/* Conflict notice floating at bottom */}
+      <div className="absolute inset-x-0 bottom-0 z-20 pointer-events-none">
+        <div className="pointer-events-auto">
+          <ConflictNotice
+            conflict={activeConflict}
+            onRetrySync={() => setPersistenceStatus("saving")}
+            onOpenRecovery={() => void handleSnapshotNow()}
+            onDismiss={() => {
+              if (!activeConflict) {
                 return
               }
-              const child = createChildCanvas(activeCanvas, `Subtopic ${canvases.length}`)
-              setCanvases((current) => [...current, child])
-              setLinks((current) => {
-                const link: HierarchyLink = {
-                  id: crypto.randomUUID(),
-                  workspaceId: activeCanvas.workspaceId,
-                  parentCanvasId: activeCanvas.id,
-                  childCanvasId: child.id,
-                  linkType: "subtopic" as const,
-                  createdAt: new Date().toISOString()
-                }
-                void persistenceRepository.saveHierarchyLink(link)
-                return [...current, link]
-              })
+              setNoticeLifecycle((current) => dismissConflictNotice(current, activeConflict.id))
             }}
-            onAddSibling={() => {
-              const now = new Date().toISOString()
-              setCanvases((current) => [
-                ...current,
-                {
-                  id: crypto.randomUUID(),
-                  workspaceId: "local-workspace",
-                  topic: "Sibling Topic",
-                  depth: activeCanvas?.depth ?? 0,
-                  parentCanvasId: activeCanvas?.parentCanvasId,
-                  createdAt: now,
-                  updatedAt: now
-                }
-              ])
-
-              const candidate: GeneratedSubtopicCandidate = {
-                id: crypto.randomUUID(),
-                workspaceId: "local-workspace",
-                parentCanvasId: activeCanvas?.id ?? "root",
-                label: `Sibling candidate ${canvases.length}`,
-                lifecycle: "presented",
-                createdAt: now,
-                updatedAt: now
-              }
-              setCandidates((current) => {
-                const next = upsertSubtopicCandidate(current, candidate)
-                void persistenceRepository.saveGeneratedSubtopicCandidate(candidate)
-                return next
-              })
-            }}
-          />
-          <div className="mt-4">
-            <CanvasBoard />
-          </div>
-          <div className="mt-4">
-            <PersistenceStatus
-              status={persistenceStatus}
-              onRetry={() => setPersistenceStatus("saving")}
-              onSnapshotNow={() => void handleSnapshotNow()}
-              onExportBackup={() => void handleExportBackup()}
-              onImportBackup={() => void handleImportBackup()}
-              onSimulateConflict={() => void handleSimulateConflict()}
-            />
-          </div>
-          <div className="mt-4">
-            <ConflictNotice
-              conflict={activeConflict}
-              onRetrySync={() => setPersistenceStatus("saving")}
-              onOpenRecovery={() => void handleSnapshotNow()}
-              onDismiss={() => {
-                if (!activeConflict) {
-                  return
-                }
-                setNoticeLifecycle((current) => dismissConflictNotice(current, activeConflict.id))
-              }}
-            />
-          </div>
-        </div>
-        <div className="space-y-3">
-          <HierarchyView
-            canvases={canvases}
-            links={links}
-            activeCanvasId={navigation.activeCanvasId}
-            onSelectCanvas={(id) => setNavigation((current) => synchronizeHierarchySelection(current, id))}
-          />
-          <SubtopicCandidatePicker
-            candidates={candidatesForCanvas(candidates, navigation.activeCanvasId)}
-            onSelect={(candidateId) => {
-              setCandidates((current) => {
-                const next = setSubtopicCandidateLifecycle(current, candidateId, "selected")
-                const changed = next.find((candidate) => candidate.id === candidateId)
-                if (changed) {
-                  void persistenceRepository.saveGeneratedSubtopicCandidate(changed)
-                }
-                return next
-              })
-            }}
-            onDismiss={(candidateId) => {
-              setCandidates((current) => {
-                const next = setSubtopicCandidateLifecycle(current, candidateId, "dismissed")
-                const changed = next.find((candidate) => candidate.id === candidateId)
-                if (changed) {
-                  void persistenceRepository.saveGeneratedSubtopicCandidate(changed)
-                }
-                return next
-              })
-            }}
-          />
-          <ProviderCredentialsForm
-            onSave={({ provider, type, credential }) => {
-              saveCredential(provider, type, credential)
-              refreshCredentials()
-              setPersistenceStatus("idle")
-            }}
-            onReplace={({ credentialId, credential }) => {
-              replaceCredential(credentialId, credential)
-              refreshCredentials()
-            }}
-            onRevoke={(credentialId) => {
-              revokeCredential(credentialId)
-              refreshCredentials()
-            }}
-            credentials={credentials}
           />
         </div>
       </div>
-    </section>
+    </div>
   )
 }

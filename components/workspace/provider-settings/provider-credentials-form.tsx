@@ -10,7 +10,7 @@ type CredentialSummary = {
 }
 
 type Props = {
-  onSave: (value: { provider: string; type: "api-key" | "oauth"; credential: string }) => void
+  onSave: (value: { provider: string; type: "api-key" | "oauth" | "aws-profile"; credential: string }) => void
   onReplace?: (value: { credentialId: string; credential: string }) => void
   onRevoke?: (credentialId: string) => void
   credentials?: CredentialSummary[]
@@ -18,7 +18,7 @@ type Props = {
 
 export function ProviderCredentialsForm({ onSave, onReplace, onRevoke, credentials = [] }: Props) {
   const [provider, setProvider] = useState("openai")
-  const [type, setType] = useState<"api-key" | "oauth">("api-key")
+  const [type, setType] = useState<"api-key" | "oauth" | "aws-profile">("api-key")
   const [credential, setCredential] = useState("")
   const [replacementCredential, setReplacementCredential] = useState("")
   const [selectedCredentialId, setSelectedCredentialId] = useState<string>("")
@@ -40,14 +40,16 @@ export function ProviderCredentialsForm({ onSave, onReplace, onRevoke, credentia
         <option value="gemini">Gemini</option>
         <option value="openrouter">OpenRouter</option>
         <option value="github-models">GitHub Models</option>
+        <option value="bedrock">Amazon Bedrock</option>
       </select>
       <select
         value={type}
-        onChange={(event) => setType(event.target.value as "api-key" | "oauth")}
+        onChange={(event) => setType(event.target.value as "api-key" | "oauth" | "aws-profile")}
         className="w-full rounded border p-1 text-xs"
       >
         <option value="api-key">API key</option>
         <option value="oauth">OAuth token</option>
+        <option value="aws-profile">AWS profile</option>
       </select>
       <input
         type="password"

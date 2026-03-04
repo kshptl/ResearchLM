@@ -35,9 +35,13 @@ export interface GraphNode {
   workspaceId: string
   canvasId: string
   type: NodeType
+  prompt?: string
   content: string
   semanticRepresentations?: Partial<Record<SemanticLevel, string>>
   position: { x: number; y: number }
+  dimensions?: { width: number; height: number }
+  colorToken?: string
+  providerOverride?: { provider: string; model: string }
   groupId?: string
   sourceNodeId?: string
   createdAt: string

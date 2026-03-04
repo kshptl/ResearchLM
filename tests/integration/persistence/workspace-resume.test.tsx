@@ -1,3 +1,4 @@
+import "@/tests/helpers/mock-react-flow"
 import React from "react"
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it } from "vitest"
@@ -13,6 +14,10 @@ describe("workspace resume", () => {
 
   it("renders persistence status", async () => {
     const view = render(<WorkspacePage />)
+
+    // Open settings drawer to access persistence controls
+    fireEvent.click(screen.getByRole("button", { name: "Open settings" }))
+
     expect(screen.getByText("Local persistence ready")).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole("button", { name: /^Subtopic$/ }))
@@ -20,6 +25,9 @@ describe("workspace resume", () => {
 
     view.unmount()
     render(<WorkspacePage />)
+
+    // Open settings drawer again after remount
+    fireEvent.click(screen.getByRole("button", { name: "Open settings" }))
 
     await waitFor(() => {
       expect(screen.getByText("Links: 1")).toBeInTheDocument()

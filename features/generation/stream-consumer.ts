@@ -81,3 +81,61 @@ export async function consumeGenerationStream(
     qualityNotice: evaluateOutputQuality(text, sourceText)
   }
 }
+
+export async function consumeGenerationStreamIncremental(
+  stream: ReadableStream<Uint8Array>,
+  sourceText: string,
+  onDelta: (chunk: string) => void
+): Promise<{ text: string; qualityNotice: QualityNotice | null }> {
+  const reader = stream.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ""
+  let fullText = ""
+  let hadMalformed = false
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+
+    // Process complete SSE frames (separated by double newline)
+    const frames = buffer.split("\n\n")
+    buffer = frames.pop() ?? ""
+
+    for (const frame of frames) {
+      if (!frame.trim()) continue
+      const { events, malformed } = parseSsePayload(frame)
+      if (malformed) hadMalformed = true
+
+      for (const event of events) {
+        if (event.event === "delta" && event.data.text) {
+          const chunk = String(event.data.text)
+          fullText += chunk
+          onDelta(chunk)
+        }
+      }
+    }
+  }
+
+  // Process any remaining buffer
+  if (buffer.trim()) {
+    const { events, malformed } = parseSsePayload(buffer)
+    if (malformed) hadMalformed = true
+    for (const event of events) {
+      if (event.event === "delta" && event.data.text) {
+        const chunk = String(event.data.text)
+        fullText += chunk
+        onDelta(chunk)
+      }
+    }
+  }
+
+  if (hadMalformed && !fullText) {
+    return { text: "", qualityNotice: malformedOutputNotice() }
+  }
+
+  return {
+    text: fullText,
+    qualityNotice: evaluateOutputQuality(fullText, sourceText),
+  }
+}

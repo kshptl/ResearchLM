@@ -1,4 +1,4 @@
-export type GenerationIntent = "prompt" | "explain" | "questions" | "subtopics"
+export type GenerationIntent = "prompt" | "explain" | "questions" | "subtopics" | "summarize"
 
 export interface GenerationMessage {
   role: "system" | "user" | "assistant" | "tool"
@@ -7,12 +7,12 @@ export interface GenerationMessage {
 
 export interface GenerationRequest {
   id?: string
-  provider: "openai" | "anthropic" | "gemini" | "openrouter" | "github-models"
+  provider: "openai" | "anthropic" | "gemini" | "openrouter" | "github-models" | "bedrock"
   model: string
   intent: GenerationIntent
   messages: GenerationMessage[]
   auth: {
-    type: "api-key" | "oauth"
+    type: "api-key" | "oauth" | "aws-profile"
     credential: string
   }
   workspaceContext?: {

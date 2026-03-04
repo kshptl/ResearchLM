@@ -289,6 +289,26 @@
 
 ---
 
+## Phase 9: Canvas Rendering (Spatial Canvas Implementation)
+
+**Purpose**: Replace static CSS grid canvas with interactive @xyflow/react spatial canvas, delivering the pan/zoom/drag/edge-rendering behavior specified in FR-001, FR-020, and the workspace-ui-contract.
+
+**Context**: T047 scaffolded the canvas-board component with mode buttons, semantic controls, and node rendering, but used a static `md:grid-cols-2` grid layout. Node positions (`GraphNode.position`) and edges (`Edge`) are stored in the data model but not rendered spatially. This phase completes the interactive canvas layer.
+
+- [ ] T170 [P] [US1] Install `@xyflow/react` dependency and import base stylesheet in `/home/patekus4/researchlm/package.json` and `/home/patekus4/researchlm/app/globals.css`
+- [ ] T171 [P] [US1] Create domain-to-React-Flow adapter layer (GraphNode↔RF Node, Edge↔RF Edge) in `/home/patekus4/researchlm/features/graph-model/react-flow-adapters.ts`
+- [ ] T172 [P] [US1] Create custom React Flow node component with handles, semantic projections, and content editing in `/home/patekus4/researchlm/components/workspace/canvas/flow-nodes/sensecape-node.tsx`
+- [ ] T173 [P] [US1] Create stable nodeTypes registry in `/home/patekus4/researchlm/components/workspace/canvas/flow-nodes/index.ts`
+- [ ] T174 [US1] Rewrite canvas-board.tsx to use ReactFlow with interaction mode mapping, viewport-driven semantic zoom, MiniMap, edge rendering, and node drag in `/home/patekus4/researchlm/components/workspace/canvas/canvas-board.tsx`
+- [ ] T175 [US1] Update workspace-shell center pane for full-height React Flow container in `/home/patekus4/researchlm/components/workspace/layout/workspace-shell.tsx`
+- [ ] T176 [P] [US1] Create shared React Flow mock for JSDOM tests in `/home/patekus4/researchlm/tests/helpers/mock-react-flow.ts`
+- [ ] T177 [US1] Update semantic-zoom-auto test for React Flow zoom model in `/home/patekus4/researchlm/tests/integration/workspace/semantic-zoom-auto.test.tsx`
+- [ ] T178 [P] [US1] Add React Flow mock to semantic-manual-persistence and semantic-view-resume tests in `/home/patekus4/researchlm/tests/integration/workspace/semantic-manual-persistence.test.tsx` and `/home/patekus4/researchlm/tests/integration/persistence/semantic-view-resume.test.tsx`
+
+**Checkpoint**: Interactive spatial canvas replaces static grid. All existing features preserved.
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -301,6 +321,7 @@
 - **Phase 6 (US4)**: Depends on Phase 2. Integrates best after US1 persistence interactions exist.
 - **Phase 7 (Polish)**: Depends on completion of all targeted user stories.
 - **Phase 8 (Visual Quality)**: Depends on Phase 7 and stabilized user-story UI states.
+- **Phase 9 (Canvas Rendering)**: Depends on Phase 3 (US1). Completes the interactive canvas layer that T047 scaffolded.
 - **Merge Gate Rule**: For user-facing changes, merge/release-candidate approval is BLOCKED until Phase 8 tasks are complete and visual CI gates pass.
 
 ### User Story Dependency Graph

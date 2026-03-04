@@ -1,3 +1,4 @@
+import "@/tests/helpers/mock-react-flow"
 import React from "react"
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
@@ -11,7 +12,11 @@ describe("auth failure routing", () => {
     )
 
     render(<WorkspacePage />)
-    fireEvent.click(screen.getByRole("button", { name: "Prompt" }))
+
+    // Submit via CentralPromptBar to trigger generation
+    const input = screen.getByPlaceholderText("Type a topic or question...")
+    fireEvent.change(input, { target: { value: "test prompt" } })
+    fireEvent.submit(input.closest("form")!)
 
     await waitFor(() => {
       expect(screen.getByRole("status")).toHaveTextContent(/^auth:/i)
@@ -27,7 +32,11 @@ describe("auth failure routing", () => {
     )
 
     render(<WorkspacePage />)
-    fireEvent.click(screen.getByRole("button", { name: "Prompt" }))
+
+    // Submit via CentralPromptBar to trigger generation
+    const input = screen.getByPlaceholderText("Type a topic or question...")
+    fireEvent.change(input, { target: { value: "test prompt" } })
+    fireEvent.submit(input.closest("form")!)
 
     await waitFor(() => {
       expect(screen.getByRole("status")).toHaveTextContent(/^permission:/i)

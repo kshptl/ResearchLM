@@ -32,6 +32,32 @@ export function createNode(params: {
   }
 }
 
+export function createConversationNode(params: {
+  workspaceId: string
+  canvasId: string
+  prompt: string
+  content: string
+  x: number
+  y: number
+  sourceNodeId?: string
+  providerOverride?: { provider: string; model: string }
+}): GraphNode {
+  const now = new Date().toISOString()
+  return {
+    id: crypto.randomUUID(),
+    workspaceId: params.workspaceId,
+    canvasId: params.canvasId,
+    type: "topic",
+    prompt: params.prompt,
+    content: params.content,
+    position: { x: params.x, y: params.y },
+    sourceNodeId: params.sourceNodeId,
+    providerOverride: params.providerOverride,
+    createdAt: now,
+    updatedAt: now,
+  }
+}
+
 export function updateNodeContent(node: GraphNode, content: string): GraphNode {
   return {
     ...node,

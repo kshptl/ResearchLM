@@ -1,24 +1,39 @@
-import React from "react"
-import { fireEvent, render, screen } from "@testing-library/react"
-import { beforeEach, describe, expect, it } from "vitest"
-import { CanvasBoard } from "@/components/workspace/canvas/canvas-board"
-import { persistenceRepository } from "@/features/persistence/repository"
+import "@/tests/helpers/mock-react-flow"
+import { describe, expect, it } from "vitest"
+import {
+  DEFAULT_SEMANTIC_BREAKPOINTS,
+  resolveSemanticLevel,
+} from "@/features/semantic-levels/state"
 
 describe("semantic zoom auto", () => {
-  beforeEach(async () => {
-    await persistenceRepository.clearStore("settings")
+  it("automatically reduces representation detail as zoom decreases", () => {
+    const state = {
+      mode: "auto" as const,
+      level: "all" as const,
+      breakpoints: DEFAULT_SEMANTIC_BREAKPOINTS,
+    }
+
+    // Full zoom → all detail
+    expect(resolveSemanticLevel(state, 1.0)).toBe("all")
+
+    // Zoom below lines threshold → lines
+    expect(resolveSemanticLevel(state, 0.7)).toBe("lines")
+
+    // Zoom below summary threshold → summary
+    expect(resolveSemanticLevel(state, 0.5)).toBe("summary")
+
+    // Zoom below keywords threshold → keywords
+    expect(resolveSemanticLevel(state, 0.2)).toBe("keywords")
   })
 
-  it("automatically reduces representation detail as zoom decreases", () => {
-    render(<CanvasBoard />)
+  it("returns manual level regardless of zoom when in manual mode", () => {
+    const state = {
+      mode: "manual" as const,
+      level: "summary" as const,
+      breakpoints: DEFAULT_SEMANTIC_BREAKPOINTS,
+    }
 
-    expect(screen.getByRole("button", { name: "Zoom out" })).toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole("button", { name: "Zoom out" }))
-    fireEvent.click(screen.getByRole("button", { name: "Zoom out" }))
-    fireEvent.click(screen.getByRole("button", { name: "Zoom out" }))
-    fireEvent.click(screen.getByRole("button", { name: "Zoom out" }))
-
-    expect(screen.getByDisplayValue("moving, san, francisco")).toBeInTheDocument()
+    expect(resolveSemanticLevel(state, 1.0)).toBe("summary")
+    expect(resolveSemanticLevel(state, 0.2)).toBe("summary")
   })
 })

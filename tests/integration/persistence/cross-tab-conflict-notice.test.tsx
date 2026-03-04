@@ -1,3 +1,4 @@
+import "@/tests/helpers/mock-react-flow"
 import React from "react"
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it } from "vitest"
@@ -11,6 +12,9 @@ describe("cross-tab conflict notice", () => {
 
   it("renders actionable non-blocking conflict notification", async () => {
     render(<WorkspacePage />)
+
+    // Open settings drawer to access the "Simulate conflict" button
+    fireEvent.click(screen.getByRole("button", { name: "Open settings" }))
 
     fireEvent.click(screen.getByRole("button", { name: "Simulate conflict" }))
 

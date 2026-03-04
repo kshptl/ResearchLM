@@ -1,7 +1,7 @@
 export type StoredCredential = {
   id: string
   provider: string
-  authType: "api-key" | "oauth"
+  authType: "api-key" | "oauth" | "aws-profile"
   encryptedValue: string
   status: "active" | "invalid" | "revoked"
   lastValidatedAt?: string
@@ -58,7 +58,7 @@ function hydrate(): void {
 
 hydrate()
 
-export function saveCredential(provider: string, authType: "api-key" | "oauth", rawValue: string): StoredCredential {
+export function saveCredential(provider: string, authType: "api-key" | "oauth" | "aws-profile", rawValue: string): StoredCredential {
   const record: StoredCredential = {
     id: crypto.randomUUID(),
     provider,

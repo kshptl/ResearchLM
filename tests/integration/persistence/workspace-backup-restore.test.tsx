@@ -1,3 +1,4 @@
+import "@/tests/helpers/mock-react-flow"
 import React from "react"
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it } from "vitest"
@@ -12,6 +13,9 @@ describe("workspace backup restore", () => {
 
   it("restores exported hierarchy state via backup import", async () => {
     render(<WorkspacePage />)
+
+    // Open settings drawer to access hierarchy and persistence controls
+    fireEvent.click(screen.getByRole("button", { name: "Open settings" }))
 
     fireEvent.click(screen.getByRole("button", { name: /^Subtopic$/ }))
     fireEvent.click(screen.getByRole("button", { name: "Export backup" }))

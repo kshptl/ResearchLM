@@ -2,7 +2,7 @@
 
 | Requirement ID | Task IDs | Notes |
 |---|---|---|
-| FR-001 | T047, T052 | Canvas node/edge/group authoring and mutation flows |
+| FR-001 | T047, T052, T171, T172, T174 | Canvas node/edge/group authoring and mutation flows |
 | FR-002 | T041, T056 | Prompt-driven generation and node creation path |
 | FR-003 | T049, T056, T057 | Intent-specific expansion output forms and orchestration |
 | FR-004 | T040, T059 | Balanced why/what/when/where/how question coverage |
@@ -21,9 +21,9 @@
 | FR-017 | T099, T104, T109, T136 | Snapshot + backup/import with partial restore summary |
 | FR-018 | T101, T105, T110, T111, T134 | Cross-tab LWW + visible conflict notification lifecycle |
 | FR-019 | T117, T150, T151 | Structured logging with redaction taxonomy |
-| FR-020 | T043, T047 | v1 advanced canvas interaction baseline |
+| FR-020 | T043, T047, T174, T175 | v1 advanced canvas interaction baseline |
 | FR-021 | T048, T055, T125 | Six node types + AA contrast validation |
-| FR-022 | T007, T046, T119 | Three-pane workspace contract |
+| FR-022 | T007, T046, T119, T175 | Three-pane workspace contract |
 | FR-023 | T018, T038, T050 | Undo/redo depth and history UI |
 | FR-024 | T008, T149 | Desktop-only editing guard and guidance |
 | FR-025 | T133, T135, T141 | Generation failure notice contract + routing |
