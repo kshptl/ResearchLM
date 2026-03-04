@@ -55,7 +55,7 @@ function rootCanvas(): Canvas {
 
 export default function WorkspacePage() {
   const workspaceId = "local-workspace"
-  const title = useMemo(() => "Sensecape Exploration Workspace", [])
+  const title = useMemo(() => "Researchlm Exploration Workspace", [])
   const [canvases, setCanvases] = useState<Canvas[]>([rootCanvas()])
   const [links, setLinks] = useState<HierarchyLink[]>([])
   const [candidates, setCandidates] = useState<GeneratedSubtopicCandidate[]>([])
@@ -75,20 +75,20 @@ export default function WorkspacePage() {
   }
 
   useEffect(() => {
-    const corruptFlag = localStorage.getItem("sensecape:workspaceStateCorrupt")
+    const corruptFlag = localStorage.getItem("researchlm:workspaceStateCorrupt")
     if (corruptFlag === "1") {
       setRecoveryRequired(true)
       return
     }
 
-    const savedCanvasId = localStorage.getItem("sensecape:activeCanvasId")
+    const savedCanvasId = localStorage.getItem("researchlm:activeCanvasId")
     if (savedCanvasId) {
       setNavigation((current) => setActiveCanvas(current, savedCanvasId))
     }
   }, [])
 
   useEffect(() => {
-    localStorage.setItem("sensecape:activeCanvasId", navigation.activeCanvasId)
+    localStorage.setItem("researchlm:activeCanvasId", navigation.activeCanvasId)
   }, [navigation.activeCanvasId])
 
   useEffect(() => {
@@ -224,7 +224,7 @@ export default function WorkspacePage() {
       hierarchyLinks: links
     })
 
-    localStorage.setItem("sensecape:last-backup", serialized)
+    localStorage.setItem("researchlm:last-backup", serialized)
     await emitStructuredLocalLog({
       domain: "persistence",
       eventType: "backup_exported",
@@ -237,7 +237,7 @@ export default function WorkspacePage() {
   }
 
   async function handleImportBackup(): Promise<void> {
-    const serialized = localStorage.getItem("sensecape:last-backup")
+    const serialized = localStorage.getItem("researchlm:last-backup")
     if (!serialized) {
       setPersistenceStatus("error")
       return
@@ -331,7 +331,7 @@ export default function WorkspacePage() {
                   persistenceRepository.clearStore("hierarchyLinks"),
                   persistenceRepository.clearStore("generatedSubtopicCandidates")
                 ]).finally(() => {
-                  localStorage.removeItem("sensecape:workspaceStateCorrupt")
+                  localStorage.removeItem("researchlm:workspaceStateCorrupt")
                   setRecoveryRequired(false)
                   setCanvases([rootCanvas()])
                   setLinks([])

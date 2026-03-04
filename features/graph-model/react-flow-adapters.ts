@@ -2,7 +2,7 @@ import type { Node as RFNode, Edge as RFEdge } from "@xyflow/react"
 import { MarkerType } from "@xyflow/react"
 import type { Edge, GraphNode, SemanticLevel } from "@/features/graph-model/types"
 
-export type SensecapeNodeData = {
+export type ResearchlmNodeData = {
   graphNode: GraphNode
   semanticLevel: SemanticLevel
   semanticMode: "auto" | "manual"
@@ -25,7 +25,7 @@ export function toRFNode(
     isStreaming?: boolean
     isEditing?: boolean
   }
-): RFNode<SensecapeNodeData> {
+): RFNode<ResearchlmNodeData> {
   return {
     id: graphNode.id,
     type: graphNode.type,
@@ -75,7 +75,7 @@ export function toRFNodes(
     streamingNodeIds?: Set<string>
     editingNodeId?: string | null
   }
-): RFNode<SensecapeNodeData>[] {
+): RFNode<ResearchlmNodeData>[] {
   return nodes.map((node) =>
     toRFNode(node, {
       semanticLevel: options.semanticLevel,

@@ -1,4 +1,4 @@
-# Data Model: Sensecape Exploration App
+# Data Model: Researchlm Exploration App
 
 ## Entity: Workspace
 

@@ -13,7 +13,7 @@ type GenerationRequestRecord = {
   updatedAt: string
 }
 
-export const DB_NAME = "sensecape"
+export const DB_NAME = "researchlm"
 export const DB_VERSION = 2
 
 type Stores = {

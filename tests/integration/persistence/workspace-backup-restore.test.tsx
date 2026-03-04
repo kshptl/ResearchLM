@@ -8,7 +8,7 @@ import { persistenceRepository } from "@/features/persistence/repository"
 describe("workspace backup restore", () => {
   beforeEach(async () => {
     await persistenceRepository.clearStore("snapshots")
-    localStorage.removeItem("sensecape:last-backup")
+    localStorage.removeItem("researchlm:last-backup")
   })
 
   it("restores exported hierarchy state via backup import", async () => {

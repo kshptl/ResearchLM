@@ -1,8 +1,8 @@
-# Requirements Quality Checklist: Sensecape Exploration App
+# Requirements Quality Checklist: Researchlm Exploration App
 
 **Purpose**: Validate requirement quality (completeness, clarity, consistency, measurability, and coverage) before implementation and review.
 **Created**: 2026-03-02
-**Feature**: `/home/kush/researchlm/specs/001-build-sensecape-app/spec.md`
+**Feature**: `/home/kush/researchlm/specs/001-build-researchlm-app/spec.md`
 
 **Note**: This checklist evaluates how well requirements are written; it does not evaluate implementation behavior.
 

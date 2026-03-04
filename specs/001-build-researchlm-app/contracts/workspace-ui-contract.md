@@ -1,4 +1,4 @@
-# Workspace UI Contract: Sensecape v1
+# Workspace UI Contract: Researchlm v1
 
 This document defines the front-end interaction contract for the v1 workspace.
 

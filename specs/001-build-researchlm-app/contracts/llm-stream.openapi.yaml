@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
-  title: Sensecape LLM Proxy API
+  title: Researchlm LLM Proxy API
   version: 0.1.0
   description: Contract for server-side model proxy streaming via SSE.
 servers:

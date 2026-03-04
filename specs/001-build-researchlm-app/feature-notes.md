@@ -1,4 +1,4 @@
-# Feature Notes: Sensecape Exploration App
+# Feature Notes: Researchlm Exploration App
 
 ## Purpose
 

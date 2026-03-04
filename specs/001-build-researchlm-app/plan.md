@@ -1,11 +1,11 @@
-# Implementation Plan: Sensecape Exploration App
+# Implementation Plan: Researchlm Exploration App
 
-**Branch**: `001-build-sensecape-app` | **Date**: 2026-03-02 | **Spec**: `/home/kush/researchlm/specs/001-build-sensecape-app/spec.md`
-**Input**: Feature specification from `/home/kush/researchlm/specs/001-build-sensecape-app/spec.md`
+**Branch**: `001-build-researchlm-app` | **Date**: 2026-03-02 | **Spec**: `/home/kush/researchlm/specs/001-build-researchlm-app/spec.md`
+**Input**: Feature specification from `/home/kush/researchlm/specs/001-build-researchlm-app/spec.md`
 
 ## Summary
 
-Build a desktop-first Sensecape exploration workspace that combines a three-pane shell, advanced canvas interactions, multilevel hierarchy navigation, local-first durability, and BYOK multi-provider generation in one integrated environment. The implementation approach uses a frontend-first Next.js architecture with `@xyflow/react` interaction primitives, Zustand state slices, normalized IndexedDB persistence, explicit SSE contracts, and constitution-enforced quality/testing/performance gates.
+Build a desktop-first Researchlm exploration workspace that combines a three-pane shell, advanced canvas interactions, multilevel hierarchy navigation, local-first durability, and BYOK multi-provider generation in one integrated environment. The implementation approach uses a frontend-first Next.js architecture with `@xyflow/react` interaction primitives, Zustand state slices, normalized IndexedDB persistence, explicit SSE contracts, and constitution-enforced quality/testing/performance gates.
 
 ## Technical Context
 
@@ -24,7 +24,7 @@ Build a desktop-first Sensecape exploration workspace that combines a three-pane
 
 - No unresolved `NEEDS CLARIFICATION` items remain after Phase 0 research.
 - Research covered canvas interaction architecture, persistence/conflict strategy, BYOK credential posture, SSE normalization, accessibility/UX consistency, and performance validation.
-- Consolidated decisions are captured in `/home/kush/researchlm/specs/001-build-sensecape-app/research.md`.
+- Consolidated decisions are captured in `/home/kush/researchlm/specs/001-build-researchlm-app/research.md`.
 
 ## Constitution Check (Pre-Phase 0)
 
@@ -52,26 +52,26 @@ Build a desktop-first Sensecape exploration workspace that combines a three-pane
 
 ### Research Output
 
-- `/home/kush/researchlm/specs/001-build-sensecape-app/research.md`
+- `/home/kush/researchlm/specs/001-build-researchlm-app/research.md`
 - Status: Complete (all technical-context unknowns resolved)
 
 ## Phase 1: Design and Contracts
 
 ### Data Model Design
 
-- Extracted entities and state transitions from spec into `/home/kush/researchlm/specs/001-build-sensecape-app/data-model.md`.
+- Extracted entities and state transitions from spec into `/home/kush/researchlm/specs/001-build-researchlm-app/data-model.md`.
 - Includes validation rules for node types, semantic modes, hierarchy links, command history depth, snapshots/backups, conflict events, generation lifecycle, and credential safety constraints.
 
 ### Interface Contracts
 
-- `/home/kush/researchlm/specs/001-build-sensecape-app/contracts/llm-stream.openapi.yaml` defines normalized request/response envelope for streaming generation.
-- `/home/kush/researchlm/specs/001-build-sensecape-app/contracts/sse-events.md` defines event taxonomy, ordering rules, and error semantics.
-- `/home/kush/researchlm/specs/001-build-sensecape-app/contracts/workspace-ui-contract.md` defines required workspace interaction, layout, accessibility, recovery, and performance contracts.
-- `/home/kush/researchlm/specs/001-build-sensecape-app/contracts/visual-regression-contract.md` defines canonical visual states (`VS-###`), capture rules, masking policy, diff thresholds, and baseline approval metadata requirements.
+- `/home/kush/researchlm/specs/001-build-researchlm-app/contracts/llm-stream.openapi.yaml` defines normalized request/response envelope for streaming generation.
+- `/home/kush/researchlm/specs/001-build-researchlm-app/contracts/sse-events.md` defines event taxonomy, ordering rules, and error semantics.
+- `/home/kush/researchlm/specs/001-build-researchlm-app/contracts/workspace-ui-contract.md` defines required workspace interaction, layout, accessibility, recovery, and performance contracts.
+- `/home/kush/researchlm/specs/001-build-researchlm-app/contracts/visual-regression-contract.md` defines canonical visual states (`VS-###`), capture rules, masking policy, diff thresholds, and baseline approval metadata requirements.
 
 ### Quickstart and Verification Guidance
 
-- `/home/kush/researchlm/specs/001-build-sensecape-app/quickstart.md` provides frontend-first implementation sequence and required verification checklist.
+- `/home/kush/researchlm/specs/001-build-researchlm-app/quickstart.md` provides frontend-first implementation sequence and required verification checklist.
 
 ### Agent Context Update
 
@@ -103,7 +103,7 @@ Build a desktop-first Sensecape exploration workspace that combines a three-pane
 ### Documentation (this feature)
 
 ```text
-/home/kush/researchlm/specs/001-build-sensecape-app/
+/home/kush/researchlm/specs/001-build-researchlm-app/
 |-- plan.md
 |-- research.md
 |-- data-model.md
@@ -172,7 +172,7 @@ Build a desktop-first Sensecape exploration workspace that combines a three-pane
 ## Phase 2 Planning Status
 
 - Planning artifacts required for `/speckit.tasks` are present (`plan.md`, `research.md`, `data-model.md`, `contracts/`, `quickstart.md`).
-- Existing task plan file is located at `/home/kush/researchlm/specs/001-build-sensecape-app/tasks.md`.
+- Existing task plan file is located at `/home/kush/researchlm/specs/001-build-researchlm-app/tasks.md`.
 
 ## Complexity Tracking
 

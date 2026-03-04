@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test"
 
 test("recovery-required fallback guides reset/import flow", async ({ page }) => {
   await page.addInitScript(() => {
-    localStorage.setItem("sensecape:workspaceStateCorrupt", "1")
+    localStorage.setItem("researchlm:workspaceStateCorrupt", "1")
   })
 
   await page.goto("/")

@@ -70,7 +70,7 @@ Masking MUST NOT cover semantic content, layout, typography hierarchy, actionabl
 
 ## Diff Threshold Enforcement
 
-Thresholds are defined in `/home/kush/researchlm/specs/001-build-sensecape-app/measurement-protocol.md` and MUST be enforced in CI.
+Thresholds are defined in `/home/kush/researchlm/specs/001-build-researchlm-app/measurement-protocol.md` and MUST be enforced in CI.
 
 ## Baseline Update Approval Metadata
 
@@ -85,7 +85,7 @@ Every approved baseline change MUST include:
 - `changedVSIds`
 - `rationale`
 
-Metadata is recorded in `/home/kush/researchlm/specs/001-build-sensecape-app/checklists/visual-review.md`.
+Metadata is recorded in `/home/kush/researchlm/specs/001-build-researchlm-app/checklists/visual-review.md`.
 
 ## CI Gate Expectations
 

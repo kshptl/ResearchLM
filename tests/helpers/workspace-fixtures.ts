@@ -15,7 +15,7 @@ export function createWorkspaceFixture(seed: string = "baseline"): WorkspaceFixt
 
   const workspace: Workspace = {
     id: workspaceId,
-    title: "Sensecape Fixture Workspace",
+    title: "Researchlm Fixture Workspace",
     rootCanvasId,
     activeCanvasId: rootCanvasId,
     version: 1,

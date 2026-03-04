@@ -5,10 +5,10 @@ import { Handle, Position, NodeResizer } from "@xyflow/react"
 import type { NodeProps } from "@xyflow/react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
-import type { SensecapeNodeData } from "@/features/graph-model/react-flow-adapters"
+import type { ResearchlmNodeData } from "@/features/graph-model/react-flow-adapters"
 
-export function SensecapeNode({ data, selected, id }: NodeProps) {
-  const { graphNode, isStreaming, isEditing, onAddChild, onPromptSubmit, onResize } = data as SensecapeNodeData
+export function ResearchlmNode({ data, selected, id }: NodeProps) {
+  const { graphNode, isStreaming, isEditing, onAddChild, onPromptSubmit, onResize } = data as ResearchlmNodeData
   const [hovered, setHovered] = useState(false)
   const [inputValue, setInputValue] = useState("")
   const throttleRef = useRef<number | null>(null)
@@ -82,7 +82,7 @@ export function SensecapeNode({ data, selected, id }: NodeProps) {
 
             {/* Response content - rendered as markdown */}
             {graphNode.content ? (
-              <div className="sensecape-markdown text-[11px] leading-relaxed text-slate-700">
+              <div className="researchlm-markdown text-[11px] leading-relaxed text-slate-700">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{graphNode.content}</ReactMarkdown>
               </div>
             ) : isStreaming ? (

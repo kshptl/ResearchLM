@@ -1,4 +1,4 @@
-# Phase 0 Research: Sensecape Exploration App
+# Phase 0 Research: Researchlm Exploration App
 
 ## Decision 1: Canvas rendering architecture
 

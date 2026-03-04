@@ -1,8 +1,8 @@
-# Quickstart: Sensecape Exploration App (Frontend-First)
+# Quickstart: Researchlm Exploration App (Frontend-First)
 
 ## Goal
 
-Implement a desktop-first Sensecape experience with:
+Implement a desktop-first Researchlm experience with:
 
 - Three-pane workspace (hierarchy, canvas, inspector) with collapsible side panes
 - Advanced canvas interactions (pan/zoom, multi-select, lasso, minimap, grouping, edge operations)

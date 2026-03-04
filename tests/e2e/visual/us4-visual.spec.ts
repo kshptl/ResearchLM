@@ -14,7 +14,7 @@ test.describe("US4 visual regression", () => {
 
   test("captures recovery-required fallback state", async ({ page }) => {
     await page.addInitScript(() => {
-      localStorage.setItem("sensecape:workspaceStateCorrupt", "1")
+      localStorage.setItem("researchlm:workspaceStateCorrupt", "1")
     })
     await openWorkspace(page)
 

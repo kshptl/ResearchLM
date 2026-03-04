@@ -8,7 +8,7 @@ export type StoredCredential = {
   updatedAt: string
 }
 
-const STORAGE_KEY = "sensecape:provider-credentials"
+const STORAGE_KEY = "researchlm:provider-credentials"
 const memoryStore = new Map<string, StoredCredential>()
 
 function encode(value: string): string {

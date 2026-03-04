@@ -1,6 +1,6 @@
-# Tasks: Sensecape Exploration App
+# Tasks: Researchlm Exploration App
 
-**Input**: Design documents from `/home/kush/researchlm/specs/001-build-sensecape-app/`
+**Input**: Design documents from `/home/kush/researchlm/specs/001-build-researchlm-app/`
 **Prerequisites**: `plan.md` (required), `spec.md` (required), `research.md`, `data-model.md`, `contracts/`, `quickstart.md`
 
 **Tests**: Include test tasks by default. User stories include unit, integration, and e2e coverage; contract tests are required for external or cross-boundary interfaces (streaming/API/UI contracts).
@@ -36,8 +36,8 @@
 - [X] T008 [P] Add desktop-only guard, editing disablement, and persistent desktop-guidance messaging in `/home/kush/researchlm/app/(workspace)/layout.tsx`
 - [X] T009 [P] Add seeded workspace graph fixtures for repeatable tests in `/home/kush/researchlm/tests/helpers/workspace-fixtures.ts`
 - [X] T010 [P] Add interaction timing helper utilities for performance assertions in `/home/kush/researchlm/tests/helpers/performance-metrics.ts`
-- [X] T011 Add constitution quality gate checklist items to verification guidance in `/home/kush/researchlm/specs/001-build-sensecape-app/quickstart.md`
-- [X] T012 Create feature divergence notes baseline in `/home/kush/researchlm/specs/001-build-sensecape-app/feature-notes.md`
+- [X] T011 Add constitution quality gate checklist items to verification guidance in `/home/kush/researchlm/specs/001-build-researchlm-app/quickstart.md`
+- [X] T012 Create feature divergence notes baseline in `/home/kush/researchlm/specs/001-build-researchlm-app/feature-notes.md`
 
 ---
 
@@ -236,23 +236,23 @@
 - [X] T126 Add integration regression for non-blocking editability during retry in `/home/kush/researchlm/tests/integration/workspace/retry-nonblocking-editing.test.tsx`
 - [X] T127 Add CI workflow for lint/format/typecheck/test/build/e2e gates in `/home/kush/researchlm/.github/workflows/quality-gates.yml`
 - [X] T128 Add CI workflow for performance gate execution and artifact upload in `/home/kush/researchlm/.github/workflows/performance-gates.yml`
-- [X] T129 Update quickstart with final verification commands and evidence checklist in `/home/kush/researchlm/specs/001-build-sensecape-app/quickstart.md`
-- [X] T130 Update feature notes with documented interaction-model divergences in `/home/kush/researchlm/specs/001-build-sensecape-app/feature-notes.md`
-- [X] T131 Record full verification run outputs in `/home/kush/researchlm/specs/001-build-sensecape-app/checklists/requirements.md`
-- [X] T132 Add constitution compliance sign-off checklist for review in `/home/kush/researchlm/specs/001-build-sensecape-app/checklists/requirements.md`
+- [X] T129 Update quickstart with final verification commands and evidence checklist in `/home/kush/researchlm/specs/001-build-researchlm-app/quickstart.md`
+- [X] T130 Update feature notes with documented interaction-model divergences in `/home/kush/researchlm/specs/001-build-researchlm-app/feature-notes.md`
+- [X] T131 Record full verification run outputs in `/home/kush/researchlm/specs/001-build-researchlm-app/checklists/requirements.md`
+- [X] T132 Add constitution compliance sign-off checklist for review in `/home/kush/researchlm/specs/001-build-researchlm-app/checklists/requirements.md`
 - [X] T133 [P] Define generation failure notice contract fields in `/home/kush/researchlm/features/generation/failure-notice-contract.ts`
 - [X] T134 [P] Define conflict-notice lifecycle policy (persist/dismiss/replace) in `/home/kush/researchlm/features/persistence/conflict-notice-policy.ts`
 - [X] T135 [P] Add integration test for non-blocking generation failure notice fields in `/home/kush/researchlm/tests/integration/workspace/generation-failure-notice.test.tsx`
 - [X] T136 [P] Add integration test for partial backup restore summary semantics in `/home/kush/researchlm/tests/integration/persistence/partial-restore-summary.test.tsx`
 - [X] T137 Add e2e recovery-required fallback flow for unreadable workspace state in `/home/kush/researchlm/tests/e2e/us4-recovery-required.spec.ts`
-- [X] T138 Add SC-004/SC-005 evaluation protocol (participant sampling, baseline method, and analysis steps) in `/home/kush/researchlm/specs/001-build-sensecape-app/measurement-protocol.md`
+- [X] T138 Add SC-004/SC-005 evaluation protocol (participant sampling, baseline method, and analysis steps) in `/home/kush/researchlm/specs/001-build-researchlm-app/measurement-protocol.md`
 - [X] T139 [P] Add unit tests for pane-layout persistence and width bounds in `/home/kush/researchlm/tests/unit/graph-model/pane-layout-state.test.ts`
 - [X] T140 [P] Add integration test for credential revocation/replacement effects on new, in-flight, and retry requests in `/home/kush/researchlm/tests/integration/workspace/credential-lifecycle-generation.test.tsx`
 - [X] T141 [P] Add integration test for auth/permission-specific failure notices and credential-action routing in `/home/kush/researchlm/tests/integration/workspace/auth-failure-routing.test.tsx`
 - [X] T142 [P] Add integration accessibility test for focus restoration after modal/popover/panel closure in `/home/kush/researchlm/tests/integration/workspace/focus-restoration.test.tsx`
-- [X] T143 Update measurement protocol with performance run metadata schema, FR-033 item-based uniqueness ratio formulas/defaults, and policy ownership/change-control rules in `/home/kush/researchlm/specs/001-build-sensecape-app/measurement-protocol.md`
-- [X] T144 [P] Add requirement-to-task traceability matrix mapping FR/NFR IDs to task IDs in `/home/kush/researchlm/specs/001-build-sensecape-app/traceability.md`
-- [X] T145 Add traceability completeness check (all FR/NFR mapped) to review checklist in `/home/kush/researchlm/specs/001-build-sensecape-app/checklists/requirements.md`
+- [X] T143 Update measurement protocol with performance run metadata schema, FR-033 item-based uniqueness ratio formulas/defaults, and policy ownership/change-control rules in `/home/kush/researchlm/specs/001-build-researchlm-app/measurement-protocol.md`
+- [X] T144 [P] Add requirement-to-task traceability matrix mapping FR/NFR IDs to task IDs in `/home/kush/researchlm/specs/001-build-researchlm-app/traceability.md`
+- [X] T145 Add traceability completeness check (all FR/NFR mapped) to review checklist in `/home/kush/researchlm/specs/001-build-researchlm-app/checklists/requirements.md`
 - [X] T146 [P] Consolidate existing expansion output validators into a shared output-form and quality-validation contract module in `/home/kush/researchlm/features/generation/output-contract.ts`
 - [X] T147 Add unit tests for shared expansion output quality guards (empty/repetitive/off-topic/malformed) and notice action handling (retry/change-action/dismiss) in `/home/kush/researchlm/tests/unit/generation/output-quality-guard.test.ts`
 - [X] T148 [P] Add integration test for generated-subtopic candidate lifecycle persistence across reload in `/home/kush/researchlm/tests/integration/workspace/subtopic-candidate-lifecycle.test.tsx`
@@ -266,8 +266,8 @@
 
 **Purpose**: Enforce deterministic visual regression and design-quality sign-off across all FR and User Story UI states.
 
-- [X] T152 [P] Define visual regression contract (viewports, required states, masking, thresholds, baseline governance) in `/home/kush/researchlm/specs/001-build-sensecape-app/contracts/visual-regression-contract.md`
-- [X] T153 [P] Define visual design-review rubric and approval template in `/home/kush/researchlm/specs/001-build-sensecape-app/checklists/visual-review.md`
+- [X] T152 [P] Define visual regression contract (viewports, required states, masking, thresholds, baseline governance) in `/home/kush/researchlm/specs/001-build-researchlm-app/contracts/visual-regression-contract.md`
+- [X] T153 [P] Define visual design-review rubric and approval template in `/home/kush/researchlm/specs/001-build-researchlm-app/checklists/visual-review.md`
 - [X] T154 [P] Add deterministic visual test helpers in `/home/kush/researchlm/tests/e2e/visual/visual-test-helpers.ts`
 - [X] T155 Configure Playwright visual snapshot conventions in `/home/kush/researchlm/playwright.config.ts`
 - [X] T156 Add visual scripts (`test:visual`, `test:visual:update`) in `/home/kush/researchlm/package.json`
@@ -275,15 +275,15 @@
 - [X] T158 [US2] Add US2 visual regression coverage in `/home/kush/researchlm/tests/e2e/visual/us2-visual.spec.ts`
 - [X] T159 [US3] Add US3 visual regression coverage in `/home/kush/researchlm/tests/e2e/visual/us3-visual.spec.ts`
 - [X] T160 [US4] Add US4 visual regression coverage in `/home/kush/researchlm/tests/e2e/visual/us4-visual.spec.ts`
-- [X] T161 Add FR/US visual coverage matrix with test IDs and baseline references in `/home/kush/researchlm/specs/001-build-sensecape-app/visual-coverage-matrix.md`
-- [X] T162 Update requirement traceability with visual mappings in `/home/kush/researchlm/specs/001-build-sensecape-app/traceability.md`
+- [X] T161 Add FR/US visual coverage matrix with test IDs and baseline references in `/home/kush/researchlm/specs/001-build-researchlm-app/visual-coverage-matrix.md`
+- [X] T162 Update requirement traceability with visual mappings in `/home/kush/researchlm/specs/001-build-researchlm-app/traceability.md`
 - [X] T163 Add merge-blocking visual CI workflow with diff artifact upload in `/home/kush/researchlm/.github/workflows/visual-gates.yml`
-- [X] T164 Update quickstart with visual runbook/baseline update protocol in `/home/kush/researchlm/specs/001-build-sensecape-app/quickstart.md`
-- [X] T165 Add visual gate and sign-off checklist items in `/home/kush/researchlm/specs/001-build-sensecape-app/checklists/requirements.md`
+- [X] T164 Update quickstart with visual runbook/baseline update protocol in `/home/kush/researchlm/specs/001-build-researchlm-app/quickstart.md`
+- [X] T165 Add visual gate and sign-off checklist items in `/home/kush/researchlm/specs/001-build-researchlm-app/checklists/requirements.md`
 - [X] T166 [P] Implement visual coverage completeness validator for FR/US -> VS mappings and artifact references in `/home/kush/researchlm/scripts/validate-visual-coverage.mjs`
 - [X] T167 Add visual coverage validation step to merge-blocking visual CI workflow in `/home/kush/researchlm/.github/workflows/visual-gates.yml`
-- [X] T168 Add release checklist gate requiring successful visual coverage validation and approved baseline-change metadata in `/home/kush/researchlm/specs/001-build-sensecape-app/checklists/requirements.md`
-- [X] T169 Add release-candidate visual rubric scoring evidence capture and artifact recording in `/home/kush/researchlm/specs/001-build-sensecape-app/checklists/visual-review.md`
+- [X] T168 Add release checklist gate requiring successful visual coverage validation and approved baseline-change metadata in `/home/kush/researchlm/specs/001-build-researchlm-app/checklists/requirements.md`
+- [X] T169 Add release-candidate visual rubric scoring evidence capture and artifact recording in `/home/kush/researchlm/specs/001-build-researchlm-app/checklists/visual-review.md`
 
 **Checkpoint**: Visual quality is measurable, traceable, and merge-blocking across all FR and User Stories.
 
@@ -297,7 +297,7 @@
 
 - [ ] T170 [P] [US1] Install `@xyflow/react` dependency and import base stylesheet in `/home/patekus4/researchlm/package.json` and `/home/patekus4/researchlm/app/globals.css`
 - [ ] T171 [P] [US1] Create domain-to-React-Flow adapter layer (GraphNode↔RF Node, Edge↔RF Edge) in `/home/patekus4/researchlm/features/graph-model/react-flow-adapters.ts`
-- [ ] T172 [P] [US1] Create custom React Flow node component with handles, semantic projections, and content editing in `/home/patekus4/researchlm/components/workspace/canvas/flow-nodes/sensecape-node.tsx`
+- [ ] T172 [P] [US1] Create custom React Flow node component with handles, semantic projections, and content editing in `/home/patekus4/researchlm/components/workspace/canvas/flow-nodes/researchlm-node.tsx`
 - [ ] T173 [P] [US1] Create stable nodeTypes registry in `/home/patekus4/researchlm/components/workspace/canvas/flow-nodes/index.ts`
 - [ ] T174 [US1] Rewrite canvas-board.tsx to use ReactFlow with interaction mode mapping, viewport-driven semantic zoom, MiniMap, edge rendering, and node drag in `/home/patekus4/researchlm/components/workspace/canvas/canvas-board.tsx`
 - [ ] T175 [US1] Update workspace-shell center pane for full-height React Flow container in `/home/patekus4/researchlm/components/workspace/layout/workspace-shell.tsx`

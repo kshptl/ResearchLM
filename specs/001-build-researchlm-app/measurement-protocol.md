@@ -33,7 +33,7 @@
 ### Baseline Method
 
 - baseline condition: manual note-taking workflow in the same source corpus
-- treatment condition: Sensecape multilevel workflow with semantic levels enabled
+- treatment condition: Researchlm multilevel workflow with semantic levels enabled
 - randomize condition order per participant to reduce sequence bias
 
 ### Analysis Steps

@@ -1,6 +1,6 @@
-# Feature Specification: Sensecape Exploration App
+# Feature Specification: Researchlm Exploration App
 
-**Feature Branch**: `001-build-sensecape-app`  
+**Feature Branch**: `001-build-researchlm-app`  
 **Created**: 2026-03-02  
 **Status**: Draft  
 **Input**: User description: "Build an application that implements the content from the pdf in this folder: 3586183.3606756.pdf"
@@ -173,13 +173,13 @@ As a returning user, I can reopen a workspace and continue from my prior canvase
 - **FR-030**: Text extraction MUST enforce span bounds using non-whitespace character count: selections below 3 characters or above 5000 characters MUST be rejected with a non-blocking message that states the applicable bound.
 - **FR-031**: Repeated semantic dive on the same source node MUST reuse the existing child canvas by default and MUST NOT create duplicate hierarchy links unless the user explicitly chooses a separate "create additional child canvas" action.
 - **FR-032**: Cross-tab last-write-wins reconciliation MUST use deterministic per-entity ordering (`updatedAtMs`, then `tabId` lexical order as tie-break) and MUST preserve referential integrity across related entities after reconciliation.
-- **FR-033**: If any expansion action result is empty, repetitive beyond the documented uniqueness policy, significantly off-topic relative to the source node intent, or structurally malformed for its expected output form, the system MUST not auto-create result nodes/canvases and MUST emit a non-blocking quality notice with options to retry, change expansion action, or dismiss. The documented uniqueness policy MUST define default thresholds (`minUniqueItemRatio = 0.70`, `maxDuplicateItemRatio = 0.30`) in `/home/kush/researchlm/specs/001-build-sensecape-app/measurement-protocol.md`, where ratios are item-based (`uniqueItemRatio = uniqueNormalizedItems / totalItems`, `duplicateItemRatio = duplicateNormalizedItems / totalItems`) after trim+casefold normalization. Off-topic MUST be evaluated using `keywordCoverage = matchedSourceKeywords / requiredSourceKeywords`, and output is off-topic when `keywordCoverage < 0.50`. `requiredSourceKeywords` MUST be derived deterministically from the source node text by trim+casefold normalization and punctuation removal, then selecting the first 10 unique tokens with length >= 4 in source order (no stopword-removal step in v1); `matchedSourceKeywords` counts exact normalized token matches found in generated output.
-- **FR-034**: The system MUST maintain visual regression coverage for all User Stories and FR-linked user-visible UI states. Each covered state MUST have a canonical `VS-###` ID in `/home/kush/researchlm/specs/001-build-sensecape-app/visual-coverage-matrix.md` and at least one baseline artifact reference per supported browser project.
-- **FR-035**: Visual regression tests MUST run as merge-blocking CI checks on supported desktop browser projects with deterministic rendering controls: fixed viewport (1440x900), `deviceScaleFactor=1`, locale `en-US`, timezone `UTC`, reduced-motion mode, deterministic font loading, and masking of approved dynamic regions. Deterministic font source/version/fallback policy and capture setup MUST be defined in `/home/kush/researchlm/specs/001-build-sensecape-app/contracts/visual-regression-contract.md`. Visual diff pass criteria MUST be defined in `/home/kush/researchlm/specs/001-build-sensecape-app/measurement-protocol.md` and enforced in CI.
-- **FR-036**: Any baseline snapshot update MUST include approval metadata in `/home/kush/researchlm/specs/001-build-sensecape-app/checklists/visual-review.md` with fields: `reviewId`, `approvalOwner`, `reviewer`, `reviewedAt`, `linkedFRs`, `linkedUserStories`, `changedVSIds`, and `rationale`. `approvalOwner` is the accountable signer for the baseline update decision.
-- **FR-037**: The UI MUST satisfy a design-review rubric covering visual hierarchy, readability, spacing consistency, color harmony, and affordance clarity, with thresholds defined in `/home/kush/researchlm/specs/001-build-sensecape-app/measurement-protocol.md`.
+- **FR-033**: If any expansion action result is empty, repetitive beyond the documented uniqueness policy, significantly off-topic relative to the source node intent, or structurally malformed for its expected output form, the system MUST not auto-create result nodes/canvases and MUST emit a non-blocking quality notice with options to retry, change expansion action, or dismiss. The documented uniqueness policy MUST define default thresholds (`minUniqueItemRatio = 0.70`, `maxDuplicateItemRatio = 0.30`) in `/home/kush/researchlm/specs/001-build-researchlm-app/measurement-protocol.md`, where ratios are item-based (`uniqueItemRatio = uniqueNormalizedItems / totalItems`, `duplicateItemRatio = duplicateNormalizedItems / totalItems`) after trim+casefold normalization. Off-topic MUST be evaluated using `keywordCoverage = matchedSourceKeywords / requiredSourceKeywords`, and output is off-topic when `keywordCoverage < 0.50`. `requiredSourceKeywords` MUST be derived deterministically from the source node text by trim+casefold normalization and punctuation removal, then selecting the first 10 unique tokens with length >= 4 in source order (no stopword-removal step in v1); `matchedSourceKeywords` counts exact normalized token matches found in generated output.
+- **FR-034**: The system MUST maintain visual regression coverage for all User Stories and FR-linked user-visible UI states. Each covered state MUST have a canonical `VS-###` ID in `/home/kush/researchlm/specs/001-build-researchlm-app/visual-coverage-matrix.md` and at least one baseline artifact reference per supported browser project.
+- **FR-035**: Visual regression tests MUST run as merge-blocking CI checks on supported desktop browser projects with deterministic rendering controls: fixed viewport (1440x900), `deviceScaleFactor=1`, locale `en-US`, timezone `UTC`, reduced-motion mode, deterministic font loading, and masking of approved dynamic regions. Deterministic font source/version/fallback policy and capture setup MUST be defined in `/home/kush/researchlm/specs/001-build-researchlm-app/contracts/visual-regression-contract.md`. Visual diff pass criteria MUST be defined in `/home/kush/researchlm/specs/001-build-researchlm-app/measurement-protocol.md` and enforced in CI.
+- **FR-036**: Any baseline snapshot update MUST include approval metadata in `/home/kush/researchlm/specs/001-build-researchlm-app/checklists/visual-review.md` with fields: `reviewId`, `approvalOwner`, `reviewer`, `reviewedAt`, `linkedFRs`, `linkedUserStories`, `changedVSIds`, and `rationale`. `approvalOwner` is the accountable signer for the baseline update decision.
+- **FR-037**: The UI MUST satisfy a design-review rubric covering visual hierarchy, readability, spacing consistency, color harmony, and affordance clarity, with thresholds defined in `/home/kush/researchlm/specs/001-build-researchlm-app/measurement-protocol.md`.
 
-Required visual browser projects are `chromium-desktop` and `firefox-desktop`, as defined by `/home/kush/researchlm/playwright.config.ts` and `/home/kush/researchlm/specs/001-build-sensecape-app/contracts/visual-regression-contract.md`.
+Required visual browser projects are `chromium-desktop` and `firefox-desktop`, as defined by `/home/kush/researchlm/playwright.config.ts` and `/home/kush/researchlm/specs/001-build-researchlm-app/contracts/visual-regression-contract.md`.
 
 ### Visual Acceptance State Inventory (Canonical)
 
@@ -196,11 +196,11 @@ Required visual browser projects are `chromium-desktop` and `firefox-desktop`, a
 - **VS-011**: Recovery-required state.
 - **VS-012**: Unsupported viewport guidance state.
 
-Each `VS-###` state MUST have at least one approved baseline per required browser project, as defined in `/home/kush/researchlm/specs/001-build-sensecape-app/contracts/visual-regression-contract.md`.
+Each `VS-###` state MUST have at least one approved baseline per required browser project, as defined in `/home/kush/researchlm/specs/001-build-researchlm-app/contracts/visual-regression-contract.md`.
 
 ### Assumptions
 
-- The requested implementation scope is the interactive system behaviors described in the Sensecape paper (not replication of the study protocol, statistical analysis, or publication assets).
+- The requested implementation scope is the interactive system behaviors described in the Researchlm paper (not replication of the study protocol, statistical analysis, or publication assets).
 - Single-user workflow is in scope for this feature; real-time multi-user collaboration is out of scope.
 - Desktop browser usage is in scope for full interaction; tablet/mobile editing workflows are out of scope for v1.
 - Generated content quality depends on the connected language model and is treated as assistive output rather than guaranteed factual truth.
@@ -219,7 +219,7 @@ Each `VS-###` state MUST have at least one approved baseline per required browse
 - The specification, implementation plan, and task list MUST each include an explicit constitution compliance check before implementation and review approval.
 - Reviewers MUST block approval when constitution-mandated quality, testing, UX, or performance obligations are unmet or unverified.
 - Any approved temporary exception to merge-blocking quality or performance gates MUST document an owner, mitigation plan, and expiry date in feature notes.
-- Requirement-to-task traceability MUST be maintained in `/home/kush/researchlm/specs/001-build-sensecape-app/traceability.md`, and each functional and non-functional requirement MUST map to at least one task before implementation approval.
+- Requirement-to-task traceability MUST be maintained in `/home/kush/researchlm/specs/001-build-researchlm-app/traceability.md`, and each functional and non-functional requirement MUST map to at least one task before implementation approval.
 
 ### Testing & Verification Requirements
 
@@ -274,8 +274,8 @@ Each `VS-###` state MUST have at least one approved baseline per required browse
 - **SC-001**: At least 90% of representative users can create a topic node, generate follow-up content, and extract text into new nodes without assistance in under 5 minutes.
 - **SC-002**: At least 85% of representative users can construct a three-level topic hierarchy and navigate between levels without losing orientation.
 - **SC-003**: At least 90% of tested sessions preserve and restore workspace structure correctly across close-and-reopen cycles.
-- **SC-004**: In within-subject usability evaluation with at least 12 participants using matched prompt sets and equal time boxes between Sensecape and a linear chat baseline, median self-rated ability to manage complex information (7-point scale) improves by at least 25% in Sensecape.
-- **SC-005**: In the same controlled within-subject trials, median count of unique participant-confirmed subtopics covered is at least 30% higher in Sensecape than the linear chat baseline for the same time box.
+- **SC-004**: In within-subject usability evaluation with at least 12 participants using matched prompt sets and equal time boxes between Researchlm and a linear chat baseline, median self-rated ability to manage complex information (7-point scale) improves by at least 25% in Researchlm.
+- **SC-005**: In the same controlled within-subject trials, median count of unique participant-confirmed subtopics covered is at least 30% higher in Researchlm than the linear chat baseline for the same time box.
 - **SC-006**: 95% of core interaction actions (node manipulation and view navigation) meet the stated responsiveness targets.
 - **SC-007**: 100% of required test layers (unit, integration, end-to-end acceptance) pass in the continuous verification pipeline.
 - **SC-008**: No critical accessibility issues remain open for keyboard navigation, focus visibility, or actionable error messaging in the defined user flows.

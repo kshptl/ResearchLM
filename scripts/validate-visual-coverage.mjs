@@ -2,8 +2,8 @@ import { readFileSync, existsSync } from "node:fs"
 import { resolve } from "node:path"
 
 const repoRoot = process.cwd()
-const matrixPath = resolve(repoRoot, "specs/001-build-sensecape-app/visual-coverage-matrix.md")
-const contractPath = resolve(repoRoot, "specs/001-build-sensecape-app/contracts/visual-regression-contract.md")
+const matrixPath = resolve(repoRoot, "specs/001-build-researchlm-app/visual-coverage-matrix.md")
+const contractPath = resolve(repoRoot, "specs/001-build-researchlm-app/contracts/visual-regression-contract.md")
 
 const requiredFR = Array.from({ length: 37 }, (_, idx) => `FR-${String(idx + 1).padStart(3, "0")}`)
 const requiredUS = ["US1", "US2", "US3", "US4"]

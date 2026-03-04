@@ -11,7 +11,7 @@ describe("workspace UI contract", () => {
     // Open settings drawer to access hierarchy and credentials
     fireEvent.click(screen.getByRole("button", { name: "Open settings" }))
 
-    expect(screen.getByText("Sensecape Exploration Workspace")).toBeInTheDocument()
+    expect(screen.getByText("Researchlm Exploration Workspace")).toBeInTheDocument()
     expect(screen.getAllByText("Hierarchy").length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText("Generated subtopics")).toBeInTheDocument()
     expect(screen.getByText("Provider Credentials (BYOK)")).toBeInTheDocument()

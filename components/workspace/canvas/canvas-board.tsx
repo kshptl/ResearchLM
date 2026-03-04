@@ -627,21 +627,21 @@ function CanvasBoardInner({ onOpenSettings }: CanvasBoardProps) {
                 type="button"
                 className="text-[10px] text-sky-600 hover:underline"
                 onClick={() => {
-                  const el = document.getElementById("sensecape-response-editor")
+                  const el = document.getElementById("researchlm-response-editor")
                   if (el) {
                     el.classList.toggle("hidden")
-                    document.getElementById("sensecape-response-markdown")?.classList.toggle("hidden")
+                    document.getElementById("researchlm-response-markdown")?.classList.toggle("hidden")
                   }
                 }}
               >
                 Toggle edit
               </button>
             </div>
-            <div id="sensecape-response-markdown" className="sensecape-markdown max-h-60 overflow-y-auto rounded border border-[hsl(var(--border))] bg-white p-2 text-sm">
+            <div id="researchlm-response-markdown" className="researchlm-markdown max-h-60 overflow-y-auto rounded border border-[hsl(var(--border))] bg-white p-2 text-sm">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{focusedNode.content || "_No response yet_"}</ReactMarkdown>
             </div>
             <textarea
-              id="sensecape-response-editor"
+              id="researchlm-response-editor"
               className="hidden h-40 w-full resize-y rounded border border-[hsl(var(--border))] bg-white p-2 text-sm outline-none focus:ring-1 focus:ring-sky-300"
               value={focusedNode.content}
               aria-label="Node content"

@@ -42,10 +42,10 @@
 | FR-031 | US2-VISUAL-001 | VS-005 | tests/e2e/visual/us2-visual.spec.ts | Reuse hierarchy navigation presentation |
 | FR-032 | US4-VISUAL-001 | VS-010 | tests/e2e/visual/us4-visual.spec.ts | Conflict reconciliation notice |
 | FR-033 | US1-VISUAL-001 | VS-004 | tests/e2e/visual/us1-visual.spec.ts | Quality notice visual contract |
-| FR-034 | VISUAL-COVERAGE-001 | VS-001, VS-002, VS-003, VS-004, VS-005, VS-006, VS-007, VS-008, VS-009, VS-010, VS-011, VS-012 | specs/001-build-sensecape-app/visual-coverage-matrix.md | Canonical VS coverage set |
-| FR-035 | VISUAL-COVERAGE-001 | VS-001, VS-002, VS-003, VS-004, VS-005, VS-006, VS-007, VS-008, VS-009, VS-010, VS-011, VS-012 | specs/001-build-sensecape-app/contracts/visual-regression-contract.md | Deterministic visual policy |
-| FR-036 | VISUAL-COVERAGE-001 | VS-001, VS-002, VS-003, VS-004, VS-005, VS-006, VS-007, VS-008, VS-009, VS-010, VS-011, VS-012 | specs/001-build-sensecape-app/checklists/visual-review.md | Approval metadata schema |
-| FR-037 | VISUAL-COVERAGE-001 | VS-001, VS-002, VS-003, VS-004, VS-005, VS-006, VS-007, VS-008, VS-009, VS-010, VS-011, VS-012 | specs/001-build-sensecape-app/checklists/visual-review.md | Rubric thresholds/evidence |
+| FR-034 | VISUAL-COVERAGE-001 | VS-001, VS-002, VS-003, VS-004, VS-005, VS-006, VS-007, VS-008, VS-009, VS-010, VS-011, VS-012 | specs/001-build-researchlm-app/visual-coverage-matrix.md | Canonical VS coverage set |
+| FR-035 | VISUAL-COVERAGE-001 | VS-001, VS-002, VS-003, VS-004, VS-005, VS-006, VS-007, VS-008, VS-009, VS-010, VS-011, VS-012 | specs/001-build-researchlm-app/contracts/visual-regression-contract.md | Deterministic visual policy |
+| FR-036 | VISUAL-COVERAGE-001 | VS-001, VS-002, VS-003, VS-004, VS-005, VS-006, VS-007, VS-008, VS-009, VS-010, VS-011, VS-012 | specs/001-build-researchlm-app/checklists/visual-review.md | Approval metadata schema |
+| FR-037 | VISUAL-COVERAGE-001 | VS-001, VS-002, VS-003, VS-004, VS-005, VS-006, VS-007, VS-008, VS-009, VS-010, VS-011, VS-012 | specs/001-build-researchlm-app/checklists/visual-review.md | Rubric thresholds/evidence |
 | US1 | US1-VISUAL-001 | VS-001, VS-002, VS-003, VS-004 | tests/e2e/visual/us1-visual.spec.ts | Story-level visual acceptance |
 | US2 | US2-VISUAL-001 | VS-005, VS-006 | tests/e2e/visual/us2-visual.spec.ts | Story-level visual acceptance |
 | US3 | US3-VISUAL-001 | VS-007, VS-008 | tests/e2e/visual/us3-visual.spec.ts | Story-level visual acceptance |
