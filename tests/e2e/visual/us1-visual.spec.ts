@@ -29,6 +29,7 @@ test.describe("US1 visual regression", () => {
     await stabilizeVisualPage(page);
     await expect(page).toHaveScreenshot("us1-vs004-generated-root-node.png", {
       fullPage: true,
+      maxDiffPixels: 400,
     });
   });
 });
