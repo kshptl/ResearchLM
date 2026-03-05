@@ -5,6 +5,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import WorkspacePage from "@/app/(workspace)/page"
 import { clearCredentialsForTests } from "@/lib/auth/credential-store"
 
+function getNodePromptButton(label: RegExp): HTMLButtonElement {
+  const matches = screen.getAllByRole("button", { name: label })
+  const nodeButton = matches.find((element) => element.closest("[data-node-editor-id]"))
+  if (!nodeButton) {
+    throw new Error("Expected node prompt button but only found non-node buttons")
+  }
+  return nodeButton as HTMLButtonElement
+}
+
 function createDeltaStreamResponse(text: string): { ok: boolean; body: { getReader: () => { read: () => Promise<{ done: boolean; value?: Uint8Array }> } } } {
   const encoder = new TextEncoder()
   const payload = encoder.encode(`event: delta\ndata: ${JSON.stringify({ text })}\n\n`)
@@ -64,7 +73,7 @@ describe("workspace prompt editing", () => {
       expect(screen.queryAllByText("original answer").length).toBeGreaterThan(0)
     })
 
-    const promptArea = screen.getByRole("button", { name: /original prompt/i })
+    const promptArea = getNodePromptButton(/original prompt/i)
     fireEvent.doubleClick(promptArea)
 
     const editor = await screen.findByLabelText("Node prompt editor")
@@ -75,7 +84,7 @@ describe("workspace prompt editing", () => {
       expect(screen.queryByLabelText("Node prompt editor")).not.toBeInTheDocument()
     })
 
-    const promptAreaAfterClose = screen.getByRole("button", { name: /original prompt/i })
+    const promptAreaAfterClose = getNodePromptButton(/original prompt/i)
     fireEvent.doubleClick(promptAreaAfterClose)
     const reopenedEditor = await screen.findByLabelText("Node prompt editor")
     expect(reopenedEditor).toHaveValue("original prompt")

@@ -6,6 +6,7 @@ const config = [
       "node_modules/**",
       ".next/**",
       "dist/**",
+      "release/**",
       "build/**",
       "coverage/**",
       "*.min.js",

@@ -18,6 +18,10 @@ export type ResearchlmNodeData = {
   isFocused?: boolean
 }
 
+/**
+ * Convert one domain node into the shape React Flow expects.
+ * Think of this as a translator between "our app data" and "canvas UI data".
+ */
 export function toRFNode(
   graphNode: GraphNode,
   options: {
@@ -41,8 +45,7 @@ export function toRFNode(
     type: graphNode.type,
     position: { x: graphNode.position.x, y: graphNode.position.y },
     selected: options.selected,
-    // Set both measured AND style dimensions to avoid visibility:hidden
-    // measured tells React Flow the node has been measured, style sets actual size
+    // Keep measured + style in sync so React Flow doesn't hide resized nodes.
     ...(graphNode.dimensions
       ? {
           measured: { width: graphNode.dimensions.width, height: graphNode.dimensions.height },
@@ -78,6 +81,10 @@ export function toRFEdge(edge: Edge): RFEdge {
   }
 }
 
+/**
+ * Convert every domain node to a React Flow node in one pass.
+ * We also attach callback handlers and quick lookup flags (selected/editing/streaming).
+ */
 export function toRFNodes(
   nodes: GraphNode[],
   options: {
@@ -96,11 +103,13 @@ export function toRFNodes(
     focusedNodeId?: string | null
   }
 ): RFNode<ResearchlmNodeData>[] {
+  // Set lookup is constant-time, so selection checks stay fast even with many nodes.
+  const selectedIds = new Set(options.selectedIds)
   return nodes.map((node) =>
     toRFNode(node, {
       semanticLevel: options.semanticLevel,
       semanticMode: options.semanticMode,
-      selected: options.selectedIds.includes(node.id),
+      selected: selectedIds.has(node.id),
       onAddChild: options.onAddChild,
       onRegenerate: options.onRegenerate,
       onDeleteNode: options.onDeleteNode,
@@ -119,6 +128,10 @@ export function toRFEdges(edges: Edge[]): RFEdge[] {
   return edges.map(toRFEdge)
 }
 
+/**
+ * Copy a new XY position from React Flow back into our domain node model.
+ * `updatedAt` changes so autosave can detect that the user moved the node.
+ */
 export function applyPositionToDomain(graphNode: GraphNode, position: { x: number; y: number }): GraphNode {
   return {
     ...graphNode,

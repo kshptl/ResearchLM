@@ -1,6 +1,7 @@
 node_modules/
 .next/
 dist/
+release/
 build/
 coverage/
 *.log
@@ -24,3 +25,10 @@ tsconfig.tsbuildinfo
 
 # Local tool folders
 .opencode/
+.specify/
+tasks/
+AGENTS.md
+SKILL.md
+
+# Local research artifacts
+/*.pdf

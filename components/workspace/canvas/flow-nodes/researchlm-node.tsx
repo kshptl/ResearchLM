@@ -45,7 +45,7 @@ const FooterActionButton = React.forwardRef<HTMLButtonElement, FooterActionButto
 )
 FooterActionButton.displayName = "FooterActionButton"
 
-export function ResearchlmNode({ data, selected, id }: NodeProps) {
+function ResearchlmNodeComponent({ data, selected, id }: NodeProps) {
   const {
     graphNode,
     isStreaming,
@@ -75,12 +75,15 @@ export function ResearchlmNode({ data, selected, id }: NodeProps) {
       } as React.CSSProperties)
 
   useEffect(() => {
+    // When edit mode opens, seed the textarea with the current prompt text.
+    // This lets users keep editing from where they left off.
     if (isEditing) {
       setInputValue(graphNode.prompt ?? "")
     }
   }, [graphNode.prompt, isEditing])
 
   const submitPrompt = useCallback(() => {
+    // We treat blank/whitespace-only prompts as "no-op".
     const nextPrompt = inputValue.trim()
     if (!nextPrompt) {
       return
@@ -90,6 +93,8 @@ export function ResearchlmNode({ data, selected, id }: NodeProps) {
   }, [id, inputValue, onPromptSubmit])
 
   const flushResizeFrame = useCallback(() => {
+    // Resize events can fire many times per drag.
+    // We only apply the latest size once per animation frame for smoother dragging.
     resizeRafRef.current = null
     const pending = pendingResizeRef.current
     if (!pending) {
@@ -101,6 +106,7 @@ export function ResearchlmNode({ data, selected, id }: NodeProps) {
 
   useEffect(() => {
     return () => {
+      // Safety cleanup: cancel pending animation frame if the node unmounts.
       if (resizeRafRef.current !== null) {
         window.cancelAnimationFrame(resizeRafRef.current)
       }
@@ -130,7 +136,7 @@ export function ResearchlmNode({ data, selected, id }: NodeProps) {
 
   return (
     <div className="relative h-full w-full" data-node-editor-id={id} style={nodeThemeStyle}>
-      {/* Only show resize handles when selected AND not streaming */}
+      {/* Hide handles while streaming so drag/resize affordances don't compete with generation state. */}
       <NodeResizer
         minWidth={260}
         minHeight={140}
@@ -173,6 +179,7 @@ export function ResearchlmNode({ data, selected, id }: NodeProps) {
                 submitPrompt()
               }}
             >
+              {/* Context stays visible while editing so users remember what text the prompt refers to. */}
               {contextBlocksMarkup}
               <Textarea
                 autoFocus
@@ -193,6 +200,7 @@ export function ResearchlmNode({ data, selected, id }: NodeProps) {
           ) : (
             <>
               {contextBlocksMarkup}
+              {/* Prompt area is always readable, and double-click switches to inline editing. */}
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -233,6 +241,7 @@ export function ResearchlmNode({ data, selected, id }: NodeProps) {
         </CardContent>
 
         <CardFooter className="shrink-0 p-1.5 [border-top:1px_solid_var(--border)]">
+          {/* Footer stays fixed while only the content area scrolls. */}
           <div className="flex w-full flex-wrap items-center gap-1">
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -348,3 +357,8 @@ export function ResearchlmNode({ data, selected, id }: NodeProps) {
     </div>
   )
 }
+
+ResearchlmNodeComponent.displayName = "ResearchlmNode"
+
+// Memo keeps untouched nodes from re-rendering when other nodes update.
+export const ResearchlmNode = React.memo(ResearchlmNodeComponent)

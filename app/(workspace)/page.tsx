@@ -50,6 +50,7 @@ type SnapshotPayload = {
 }
 
 function createId(): string {
+  // We prefer crypto UUID when available, with a simple fallback for older environments.
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
     return crypto.randomUUID()
   }
@@ -80,6 +81,7 @@ function createEmptyGraphState(workspaceId: string): CanvasGraphState {
 }
 
 function normalizeProviderId(providerId: string): string {
+  // Normalize aliases so auth resolution and model loading use one canonical id.
   if (providerId === "github-models" || providerId === "github-copilot" || providerId === "github-copilot-enterprise") {
     return "github"
   }
@@ -171,6 +173,7 @@ function sanitizeGeneratedTitle(raw: string, fallbackPrompt: string): string {
 }
 
 function parseSnapshot(workspaceId: string, payload: SnapshotPayload | undefined): CanvasGraphState {
+  // Parse persisted snapshot data safely and fall back to an empty graph shape when needed.
   const canvases = Array.isArray(payload?.canvases) ? (payload.canvases as Canvas[]) : [rootCanvas(workspaceId)]
   const links = Array.isArray(payload?.links) ? (payload.links as HierarchyLink[]) : []
   const nodes = Array.isArray(payload?.nodes) ? (payload.nodes as GraphNode[]) : []
@@ -200,6 +203,7 @@ function parseSnapshot(workspaceId: string, payload: SnapshotPayload | undefined
 }
 
 function upsertSortedSessions(current: ChatSessionRecord[], next: ChatSessionRecord): ChatSessionRecord[] {
+  // Replace or insert by id, then sort newest-first for the resume list.
   const byId = new Map(current.map((session) => [session.id, session]))
   byId.set(next.id, next)
   return Array.from(byId.values()).sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
@@ -314,6 +318,7 @@ export default function WorkspacePage() {
       return
     }
 
+    // Once a chat has real content, we keep autosaving it across updates.
     const hasContent = latestGraph.nodes.length > 0 || latestGraph.edges.length > 0
     if (hasContent) {
       persistCurrentChatRef.current = true
@@ -369,6 +374,7 @@ export default function WorkspacePage() {
   }, [clearAutosaveTimer])
 
   const scheduleAutosave = useCallback(() => {
+    // Debounce saves so rapid drag/typing changes become one backend write.
     clearAutosaveTimer()
     autosaveTimerRef.current = window.setTimeout(() => {
       void flushAutosave()
@@ -376,6 +382,7 @@ export default function WorkspacePage() {
   }, [clearAutosaveTimer, flushAutosave])
 
   const openExistingChat = useCallback(async (chatId: string) => {
+    // Flush pending writes before switching chats to avoid losing the active draft.
     await flushAutosave()
     const session = await persistenceRepository.getChatSession(chatId)
     if (!session) {
@@ -404,6 +411,7 @@ export default function WorkspacePage() {
         return fallbackTitleFromPrompt(prompt)
       }
 
+      // Reuse normal generation API to create a concise chat title from the first prompt.
       const response = await fetch("/api/llm/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -456,6 +464,7 @@ export default function WorkspacePage() {
   }, [openExistingChat])
 
   const handleGraphStateChange = useCallback((state: CanvasGraphState) => {
+    // Any graph change should refresh the latest snapshot target and trigger autosave.
     latestGraphRef.current = state
     if (state.nodes.length > 0 || state.edges.length > 0) {
       persistCurrentChatRef.current = true
@@ -496,6 +505,7 @@ export default function WorkspacePage() {
       refreshCredentials()
       let sessions = await persistenceRepository.listChatSessions()
 
+      // Migration path: recover older single-workspace snapshots into chat sessions.
       if (sessions.length === 0) {
         const legacySnapshot = await loadLatestWorkspaceSnapshot("local-workspace")
         if (legacySnapshot) {
@@ -537,6 +547,7 @@ export default function WorkspacePage() {
       return
     }
 
+    // If saved default model is no longer available, select a safe fallback.
     const currentProvider = catalogProviders.find((provider) => provider.id === workspaceDefaultModel.provider)
     const currentModelExists = currentProvider?.models.some((model) => model.id === workspaceDefaultModel.model) ?? false
     if (currentProvider && currentModelExists) {
@@ -563,6 +574,7 @@ export default function WorkspacePage() {
     }
 
     const updateWidth = () => {
+      // Keep canvas aware of settings width so side panels do not overlap.
       setSettingsPanelWidthPx(Math.round(panel.getBoundingClientRect().width))
     }
 
@@ -582,6 +594,7 @@ export default function WorkspacePage() {
     }
 
     function handleVisibilityChange(): void {
+      // Save before tab goes into background to reduce data-loss risk.
       if (document.visibilityState === "hidden") {
         void flushAutosave()
       }

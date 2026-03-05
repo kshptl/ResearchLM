@@ -28,7 +28,7 @@ import { nodeTypes } from "@/components/workspace/canvas/flow-nodes"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { toRFNodes, toRFEdges } from "@/features/graph-model/react-flow-adapters"
 import {
   DEFAULT_WORKSPACE_MODEL_PREFERENCE,
@@ -93,11 +93,14 @@ const GENERATION_ERROR_TOAST_ID = "canvas:generation-error"
 const GENERATION_FAILURE_TOAST_ID = "canvas:generation-failure"
 
 function parseExpandItems(raw: string): string[] {
-  const lines = raw.split("\n").map((l) => l.replace(/^\d+[\.\)]\s*/, "").trim()).filter(Boolean)
+  // LLM expand responses often come back as numbered lists.
+  // Strip number prefixes and keep up to three non-empty lines.
+  const lines = raw.split("\n").map((line) => line.replace(/^\d+[\.\)]\s*/, "").trim()).filter(Boolean)
   return lines.slice(0, 3)
 }
 
 function getClientPosition(event: MouseEvent | TouchEvent): { x: number; y: number } | null {
+  // We accept both mouse and touch events so edge-drag behavior works on desktop and mobile.
   if ("clientX" in event && "clientY" in event) {
     return { x: event.clientX, y: event.clientY }
   }
@@ -277,11 +280,19 @@ function CanvasBoardInner({
   )
   const [dismissedMissingCredentialsNotice, setDismissedMissingCredentialsNotice] = useState(false)
   const [responseFollowUpMenu, setResponseFollowUpMenu] = useState<ResponseFollowUpMenuState | null>(null)
+  // `topologyVersion` tracks node/edge structure changes (add/remove/connect).
+  // `forceLayoutNonce` tracks "same structure, but sizing changed" refreshes.
+  const [topologyVersion, setTopologyVersion] = useState(0)
   const [forceLayoutNonce, setForceLayoutNonce] = useState(0)
   const forceSimulationRef = useRef<ForceLayoutSimulation | null>(null)
   const forceNodeLookupRef = useRef<Map<string, ForceLayoutNode>>(new Map())
   const forceTickRafRef = useRef<number | null>(null)
   const pendingForcePositionsRef = useRef<Map<string, { x: number; y: number }> | null>(null)
+  const latestNodesRef = useRef<GraphNode[]>(nodes)
+  const latestEdgesRef = useRef<DomainEdge[]>(edges)
+  // Stream buffers let us batch tiny token updates into one paint-time state write.
+  const streamDeltaBufferRef = useRef<Map<string, string>>(new Map())
+  const streamFlushRafRef = useRef<number | null>(null)
   const { screenToFlowPosition } = useReactFlow()
 
   const activeProviders = useMemo(() => activeCredentialsByProvider(credentials), [credentials])
@@ -321,24 +332,12 @@ function CanvasBoardInner({
     return options
   }, [catalogProviders])
 
-  const focusedNode = focusedNodeId ? nodes.find((n) => n.id === focusedNodeId) ?? null : null
+  const focusedNode = focusedNodeId ? nodes.find((node) => node.id === focusedNodeId) ?? null : null
   const focusedNodeContextBlocks = (focusedNode?.promptContextBlocks ?? [])
     .map((block) => block.trim())
     .filter((block) => block.length > 0)
   const nodePanelRightPx = settingsPanelOpen ? settingsPanelWidthPx + 24 : 12
-  const forceLayoutSignature = useMemo(() => {
-    const nodeShapeSignature = [...nodes]
-      .sort((left, right) => left.id.localeCompare(right.id))
-      .map((node) => node.id)
-      .join("|")
-
-    const edgeSignature = [...edges]
-      .sort((left, right) => left.id.localeCompare(right.id))
-      .map((edge) => `${edge.fromNodeId}->${edge.toNodeId}`)
-      .join("|")
-
-    return `${nodeShapeSignature}::${edgeSignature}::${forceLayoutNonce}`
-  }, [edges, forceLayoutNonce, nodes])
+  const forceLayoutSignature = useMemo(() => `${topologyVersion}::${forceLayoutNonce}`, [forceLayoutNonce, topologyVersion])
 
   useEffect(() => {
     return subscribeWorkspaceDefaultModelPreference((preference) => {
@@ -381,8 +380,12 @@ function CanvasBoardInner({
 
   useEffect(() => {
     if (generation.failureNotice) {
+      const failureNoticeMessage =
+        generation.failureNotice.category === "auth" || generation.failureNotice.category === "permission"
+          ? `${generation.failureNotice.category}: ${generation.failureNotice.message}\n\nActions: ${generation.failureNotice.actions.join(" / ")}`
+          : generation.failureNotice.message
       toast.dismiss(GENERATION_ERROR_TOAST_ID)
-      toast.warning(generation.failureNotice.message, {
+      toast.warning(failureNoticeMessage, {
         id: GENERATION_FAILURE_TOAST_ID,
       })
       return
@@ -455,11 +458,82 @@ function CanvasBoardInner({
   }, [editingNodeId])
 
   useEffect(() => {
+    // Keep current graph refs fresh so async callbacks read the latest state
+    // without forcing new callback instances on every render.
+    latestNodesRef.current = nodes
+    latestEdgesRef.current = edges
+  }, [edges, nodes])
+
+  const flushStreamDeltas = useCallback(() => {
+    // We group tiny token chunks and apply them once per animation frame.
+    // This keeps typing/dragging smooth while text is streaming in.
+    streamFlushRafRef.current = null
+    if (streamDeltaBufferRef.current.size === 0) {
+      return
+    }
+
+    const pending = new Map(streamDeltaBufferRef.current)
+    streamDeltaBufferRef.current.clear()
+
+    setNodes((currentNodes) => {
+      let changed = false
+      const nextNodes = currentNodes.map((node) => {
+        const chunk = pending.get(node.id)
+        if (!chunk) {
+          return node
+        }
+        changed = true
+        return {
+          ...node,
+          content: node.content + chunk,
+        }
+      })
+      return changed ? nextNodes : currentNodes
+    })
+  }, [])
+
+  const queueStreamDelta = useCallback(
+    (nodeId: string, chunk: string) => {
+      // Save incoming text by node id so one node update can include many chunks.
+      if (!chunk) {
+        return
+      }
+      const pending = streamDeltaBufferRef.current
+      pending.set(nodeId, `${pending.get(nodeId) ?? ""}${chunk}`)
+      if (streamFlushRafRef.current !== null) {
+        return
+      }
+      // Schedule a single paint-time flush instead of updating on every token.
+      streamFlushRafRef.current = window.requestAnimationFrame(flushStreamDeltas)
+    },
+    [flushStreamDeltas],
+  )
+
+  const clearQueuedStreamDelta = useCallback((nodeId: string) => {
+    // When a request finishes, clear leftover buffered text for that node.
+    streamDeltaBufferRef.current.delete(nodeId)
+  }, [])
+
+  useEffect(() => {
+    const streamDeltaBuffer = streamDeltaBufferRef.current
+    return () => {
+      if (streamFlushRafRef.current !== null) {
+        window.cancelAnimationFrame(streamFlushRafRef.current)
+        streamFlushRafRef.current = null
+      }
+      streamDeltaBuffer.clear()
+    }
+  }, [])
+
+  useEffect(() => {
     if (typeof window === "undefined") {
       return
     }
 
-    if (nodes.length < 2) {
+    const latestNodes = latestNodesRef.current
+    const latestEdges = latestEdgesRef.current
+
+    if (latestNodes.length < 2) {
       forceSimulationRef.current?.stop()
       forceSimulationRef.current = null
       forceNodeLookupRef.current = new Map()
@@ -470,12 +544,14 @@ function CanvasBoardInner({
       return
     }
 
-    const { simulation, nodeLookup } = createForceLayoutSimulation(nodes, edges)
+    const { simulation, nodeLookup } = createForceLayoutSimulation(latestNodes, latestEdges)
     forceSimulationRef.current?.stop()
     forceSimulationRef.current = simulation
     forceNodeLookupRef.current = nodeLookup
 
     const flushTick = () => {
+      // Apply force-layout position updates once per animation frame.
+      // This keeps movement smooth and avoids overwhelming React with tiny updates.
       forceTickRafRef.current = null
       const nextPositions = pendingForcePositionsRef.current
       if (!nextPositions || nextPositions.size === 0) {
@@ -551,7 +627,7 @@ function CanvasBoardInner({
 
   // Callbacks for nodes (stable refs for memoization)
   const handleAddChild = useCallback((parentNodeId: string, initialPrompt = "", promptContextBlocks?: string[]) => {
-    const parent = nodes.find((n) => n.id === parentNodeId)
+    const parent = nodes.find((node) => node.id === parentNodeId)
     if (!parent) return
 
     const child = createConversationNode({
@@ -566,10 +642,12 @@ function CanvasBoardInner({
     })
 
     setNodes((current) => [...current, child])
+    // Create a graph edge right away so the child keeps context from its parent.
     setEdges((current) => [
       ...current,
       createEdge({ workspaceId, canvasId, fromNodeId: parent.id, toNodeId: child.id }),
     ])
+    setTopologyVersion((version) => version + 1)
     setEditingNodeId(child.id)
     setFocusedNodeId(null)
   }, [nodes, canvasId, workspaceId])
@@ -581,6 +659,7 @@ function CanvasBoardInner({
 
   const handleResponseContextMenu = useCallback(
     (event: React.MouseEvent<HTMLDivElement>, nodeId: string) => {
+      // Only open follow-up menu when selection exists inside this response block.
       const selection = window.getSelection()
       if (!selection || selection.rangeCount === 0) {
         setResponseFollowUpMenu(null)
@@ -616,24 +695,25 @@ function CanvasBoardInner({
     if (!responseFollowUpMenu) {
       return
     }
+    // We store selected text as context blocks, then keep prompt input clean in the UI.
     handleAddChild(responseFollowUpMenu.nodeId, "", createFollowUpContextBlocks(responseFollowUpMenu.selectedText))
     setResponseFollowUpMenu(null)
   }, [handleAddChild, responseFollowUpMenu])
 
   const handleNodeResize = useCallback((nodeId: string, width: number, height: number, isFinal: boolean = true) => {
-    setNodes((current) => current.map((n) => {
-      if (n.id !== nodeId) {
-        return n
+    setNodes((current) => current.map((node) => {
+      if (node.id !== nodeId) {
+        return node
       }
 
-      const currentWidth = n.dimensions?.width ?? 0
-      const currentHeight = n.dimensions?.height ?? 0
+      const currentWidth = node.dimensions?.width ?? 0
+      const currentHeight = node.dimensions?.height ?? 0
       if (Math.abs(currentWidth - width) < 0.5 && Math.abs(currentHeight - height) < 0.5) {
-        return n
+        return node
       }
 
       return {
-        ...n,
+        ...node,
         dimensions: { width, height },
         ...(isFinal ? { updatedAt: new Date().toISOString() } : {}),
       }
@@ -641,6 +721,7 @@ function CanvasBoardInner({
 
     if (isFinal) {
       // Recreate force layout once after resize completes so collision radii reflect final dimensions.
+      setTopologyVersion((version) => version + 1)
       setForceLayoutNonce((value) => value + 1)
     }
   }, [])
@@ -656,76 +737,52 @@ function CanvasBoardInner({
   }, [])
 
   const handlePromptSubmit = useCallback(async (nodeId: string, prompt: string) => {
-    setNodes((current) => current.map((n) =>
-      n.id === nodeId ? { ...n, prompt, updatedAt: new Date().toISOString() } : n
+    // Save the newest prompt first so autosave/history reflects what user submitted.
+    setNodes((current) => current.map((node) =>
+      node.id === nodeId ? { ...node, prompt, updatedAt: new Date().toISOString() } : node
     ))
     setEditingNodeId(null)
-    setStreamingNodeIds((s) => new Set(s).add(nodeId))
+    setStreamingNodeIds((streamingIds) => new Set(streamingIds).add(nodeId))
 
-    const node = nodes.find((n) => n.id === nodeId)
+    const node = nodes.find((candidate) => candidate.id === nodeId)
     const overrides = node?.providerOverride
       ? { provider: node.providerOverride.provider, model: node.providerOverride.model }
       : undefined
 
+    // Build full prompt from linked ancestors + manual context blocks.
     const fullPrompt = composePromptWithConversationContext(nodes, edges, nodeId, prompt, node?.promptContextBlocks)
-
-    const text = await generation.runIntent("prompt", fullPrompt, {
-      overrides,
-      onDelta: (chunk) => {
-        setNodes((current) => current.map((n) =>
-          n.id === nodeId ? { ...n, content: n.content + chunk } : n
-        ))
-      },
-    })
-
-    setNodes((current) => current.map((n) =>
-      n.id === nodeId ? { ...n, content: text, updatedAt: new Date().toISOString() } : n
-    ))
-    setStreamingNodeIds((s) => { const next = new Set(s); next.delete(nodeId); return next })
-  }, [nodes, edges, generation])
-
-  const rfNodes = useMemo(
-    () =>
-      toRFNodes(nodes, {
-        semanticLevel: "all",
-        semanticMode: "manual",
-        selectedIds: selection.nodeIds,
-        onAddChild: handleAddChild,
-        onRegenerate: (nodeId) => {
-          void handleRegenerate(nodeId)
+    let text: string | null = null
+    try {
+      text = await generation.runIntent("prompt", fullPrompt, {
+        overrides,
+        onDelta: (chunk) => {
+          queueStreamDelta(nodeId, chunk)
         },
-        onDeleteNode: handleDeleteNode,
-        onSetColor: handleNodeColorChange,
-        onPromptEditStart: handleStartPromptEdit,
-        onPromptSubmit: handlePromptSubmit,
-        onResize: handleNodeResize,
-        streamingNodeIds,
-        editingNodeId,
-        focusedNodeId,
-      }),
-    [
-      nodes,
-      selection.nodeIds,
-      handleAddChild,
-      handleRegenerate,
-      handleDeleteNode,
-      handleNodeColorChange,
-      handleStartPromptEdit,
-      handlePromptSubmit,
-      handleNodeResize,
-      streamingNodeIds,
-      editingNodeId,
-      focusedNodeId,
-    ]
-  )
+      })
+    } finally {
+      clearQueuedStreamDelta(nodeId)
+      setStreamingNodeIds((streamingIds) => {
+        const next = new Set(streamingIds)
+        next.delete(nodeId)
+        return next
+      })
+    }
 
-  const rfEdges = useMemo(() => toRFEdges(edges), [edges])
+    if (typeof text !== "string") {
+      return
+    }
+
+    setNodes((current) => current.map((candidate) =>
+      candidate.id === nodeId ? { ...candidate, content: text, updatedAt: new Date().toISOString() } : candidate
+    ))
+  }, [nodes, edges, generation, queueStreamDelta, clearQueuedStreamDelta])
 
   useEffect(() => {
     if (typeof fetch !== "function") {
       return
     }
 
+    // Keep cache bounded so stale credential/model entries do not pile up forever.
     pruneProviderModelCache()
     if (activeProviders.length === 0) {
       setCatalogProviders([])
@@ -769,6 +826,7 @@ function CanvasBoardInner({
       return
     }
 
+    // Refresh only providers that are missing cache or have stale cache entries.
     void fetch("/api/providers/models", {
       method: "POST",
       headers: {
@@ -822,6 +880,7 @@ function CanvasBoardInner({
           })
         }
 
+        // Merge fresh results over cache, then remove providers no longer authorized.
         const mergedByProvider = new Map<string, CatalogProviderOption>()
         for (const provider of cachedProviders) {
           mergedByProvider.set(provider.id, provider)
@@ -866,14 +925,14 @@ function CanvasBoardInner({
     updateWorkspaceModelSelection(preferredProvider.id, preferredModel.id)
   }, [catalogProviders, updateWorkspaceModelSelection, workspaceModel, workspaceProvider])
 
-  // --- Initial prompt from central bar ---
-  async function handleInitialPrompt(prompt: string) {
+  const handleInitialPrompt = useCallback(async (prompt: string) => {
     onFirstPromptSubmitted?.({
       prompt,
       provider: workspaceProvider,
       model: workspaceModel,
     })
 
+    // First prompt creates the first canvas node.
     const nodeId = crypto.randomUUID()
     const now = new Date().toISOString()
     const newNode: GraphNode = {
@@ -889,92 +948,148 @@ function CanvasBoardInner({
     }
     setNodes([newNode])
     setStreamingNodeIds(new Set([nodeId]))
+    setTopologyVersion((version) => version + 1)
 
-    const text = await generation.runIntent("prompt", prompt, {
-      onDelta: (chunk) => {
-        setNodes((current) => current.map((n) =>
-          n.id === nodeId ? { ...n, content: n.content + chunk } : n
-        ))
-      },
-    })
+    let text: string | null = null
+    try {
+      text = await generation.runIntent("prompt", prompt, {
+        onDelta: (chunk) => {
+          queueStreamDelta(nodeId, chunk)
+        },
+      })
+    } finally {
+      clearQueuedStreamDelta(nodeId)
+      setStreamingNodeIds(new Set())
+    }
 
-    setNodes((current) => current.map((n) =>
-      n.id === nodeId ? { ...n, content: text, updatedAt: new Date().toISOString() } : n
+    if (typeof text !== "string") {
+      return
+    }
+
+    setNodes((current) => current.map((node) =>
+      node.id === nodeId ? { ...node, content: text, updatedAt: new Date().toISOString() } : node
     ))
-    setStreamingNodeIds(new Set())
-  }
+  }, [
+    onFirstPromptSubmitted,
+    workspaceProvider,
+    workspaceModel,
+    workspaceId,
+    canvasId,
+    generation,
+    queueStreamDelta,
+    clearQueuedStreamDelta,
+  ])
 
-  // --- Batch expand (Questions / Subtopics) ---
-  async function handleBatchExpand(intent: "questions" | "subtopics", sourceNode: GraphNode) {
+  const handleBatchExpand = useCallback(async (intent: "questions" | "subtopics", sourceNode: GraphNode) => {
     const raw = await generation.runIntent(intent, sourceNode.content)
     const items = parseExpandItems(raw)
+    if (items.length === 0) {
+      return
+    }
 
-    for (let i = 0; i < Math.min(items.length, 3); i++) {
-      const angle = (2 * Math.PI * i) / 3 - Math.PI / 2
+    const childEntries = items.slice(0, 3).map((item, index) => {
+      const angle = (2 * Math.PI * index) / 3 - Math.PI / 2
       const radius = 250 + Math.random() * 50
       const childX = sourceNode.position.x + Math.cos(angle) * radius + (Math.random() - 0.5) * 40
       const childY = sourceNode.position.y + Math.sin(angle) * radius + (Math.random() - 0.5) * 40
 
       const child = createConversationNode({
-        workspaceId, canvasId,
-        prompt: items[i],
+        workspaceId,
+        canvasId,
+        prompt: item,
         content: "",
         x: childX,
         y: childY,
         sourceNodeId: sourceNode.id,
       })
 
-      setNodes((current) => [...current, child])
-      setEdges((current) => [
-        ...current,
-        createEdge({ workspaceId, canvasId, fromNodeId: sourceNode.id, toNodeId: child.id }),
-      ])
-      setStreamingNodeIds((s) => new Set(s).add(child.id))
-
-      // Fire concurrent generation for each child
-      void (async () => {
-        const text = await generation.runIntent("prompt", items[i], {
-          onDelta: (chunk) => {
-            setNodes((current) => current.map((n) =>
-              n.id === child.id ? { ...n, content: n.content + chunk } : n
-            ))
-          },
-        })
-        setNodes((current) => current.map((n) =>
-          n.id === child.id ? { ...n, content: text, updatedAt: new Date().toISOString() } : n
-        ))
-        setStreamingNodeIds((s) => { const next = new Set(s); next.delete(child.id); return next })
-      })()
-    }
-  }
-
-  // --- Summarize ---
-  async function handleSummarize(nodeId: string) {
-    const node = nodes.find((n) => n.id === nodeId)
-    if (!node) return
-    setStreamingNodeIds((s) => new Set(s).add(nodeId))
-    setNodes((current) => current.map((n) => n.id === nodeId ? { ...n, content: "" } : n))
-
-    const text = await generation.runIntent("summarize", node.content, {
-      onDelta: (chunk) => {
-        setNodes((current) => current.map((n) =>
-          n.id === nodeId ? { ...n, content: n.content + chunk } : n
-        ))
-      },
+      return { child, prompt: item }
     })
 
-    setNodes((current) => current.map((n) =>
-      n.id === nodeId ? { ...n, content: text, updatedAt: new Date().toISOString() } : n
-    ))
-    setStreamingNodeIds((s) => { const next = new Set(s); next.delete(nodeId); return next })
-  }
+    setNodes((current) => [...current, ...childEntries.map((entry) => entry.child)])
+    setEdges((current) => [
+      ...current,
+      ...childEntries.map((entry) =>
+        createEdge({ workspaceId, canvasId, fromNodeId: sourceNode.id, toNodeId: entry.child.id }),
+      ),
+    ])
+    setStreamingNodeIds((streamingIds) => {
+      const next = new Set(streamingIds)
+      for (const entry of childEntries) {
+        next.add(entry.child.id)
+      }
+      return next
+    })
+    setTopologyVersion((version) => version + 1)
 
-  // --- Regenerate ---
-  async function handleRegenerate(nodeId: string) {
-    const node = nodes.find((n) => n.id === nodeId)
+    // Generate each child response independently so partial results show up quickly.
+    for (const entry of childEntries) {
+      void (async () => {
+        let text: string | null = null
+        try {
+          text = await generation.runIntent("prompt", entry.prompt, {
+            onDelta: (chunk) => {
+              queueStreamDelta(entry.child.id, chunk)
+            },
+          })
+        } finally {
+          clearQueuedStreamDelta(entry.child.id)
+          setStreamingNodeIds((streamingIds) => {
+            const next = new Set(streamingIds)
+            next.delete(entry.child.id)
+            return next
+          })
+        }
+
+        if (typeof text !== "string") {
+          return
+        }
+
+        setNodes((current) => current.map((node) =>
+          node.id === entry.child.id ? { ...node, content: text, updatedAt: new Date().toISOString() } : node
+        ))
+      })()
+    }
+  }, [generation, workspaceId, canvasId, queueStreamDelta, clearQueuedStreamDelta])
+
+  const handleSummarize = useCallback(async (nodeId: string) => {
+    const node = nodes.find((candidate) => candidate.id === nodeId)
+    if (!node) return
+    setStreamingNodeIds((streamingIds) => new Set(streamingIds).add(nodeId))
+    // Clear old response so users can immediately see new summary is in progress.
+    setNodes((current) => current.map((candidate) => candidate.id === nodeId ? { ...candidate, content: "" } : candidate))
+
+    let text: string | null = null
+    try {
+      text = await generation.runIntent("summarize", node.content, {
+        onDelta: (chunk) => {
+          queueStreamDelta(nodeId, chunk)
+        },
+      })
+    } finally {
+      clearQueuedStreamDelta(nodeId)
+      setStreamingNodeIds((streamingIds) => {
+        const next = new Set(streamingIds)
+        next.delete(nodeId)
+        return next
+      })
+    }
+
+    if (typeof text !== "string") {
+      return
+    }
+
+    setNodes((current) => current.map((candidate) =>
+      candidate.id === nodeId ? { ...candidate, content: text, updatedAt: new Date().toISOString() } : candidate
+    ))
+  }, [nodes, generation, queueStreamDelta, clearQueuedStreamDelta])
+
+  const handleRegenerate = useCallback(async (nodeId: string) => {
+    const node = nodes.find((candidate) => candidate.id === nodeId)
     if (!node?.prompt) return
-    setStreamingNodeIds((s) => new Set(s).add(nodeId))
-    setNodes((current) => current.map((n) => n.id === nodeId ? { ...n, content: "" } : n))
+    setStreamingNodeIds((streamingIds) => new Set(streamingIds).add(nodeId))
+    // Clear stale content before replaying generation with current context.
+    setNodes((current) => current.map((candidate) => candidate.id === nodeId ? { ...candidate, content: "" } : candidate))
 
     const overrides = node.providerOverride
       ? { provider: node.providerOverride.provider, model: node.providerOverride.model }
@@ -988,33 +1103,87 @@ function CanvasBoardInner({
       node.promptContextBlocks,
     )
 
-    const text = await generation.runIntent("prompt", fullPrompt, {
-      overrides,
-      onDelta: (chunk) => {
-        setNodes((current) => current.map((n) =>
-          n.id === nodeId ? { ...n, content: n.content + chunk } : n
-        ))
-      },
-    })
+    let text: string | null = null
+    try {
+      text = await generation.runIntent("prompt", fullPrompt, {
+        overrides,
+        onDelta: (chunk) => {
+          queueStreamDelta(nodeId, chunk)
+        },
+      })
+    } finally {
+      clearQueuedStreamDelta(nodeId)
+      setStreamingNodeIds((streamingIds) => {
+        const next = new Set(streamingIds)
+        next.delete(nodeId)
+        return next
+      })
+    }
 
-    setNodes((current) => current.map((n) =>
-      n.id === nodeId ? { ...n, content: text, updatedAt: new Date().toISOString() } : n
+    if (typeof text !== "string") {
+      return
+    }
+
+    setNodes((current) => current.map((candidate) =>
+      candidate.id === nodeId ? { ...candidate, content: text, updatedAt: new Date().toISOString() } : candidate
     ))
-    setStreamingNodeIds((s) => { const next = new Set(s); next.delete(nodeId); return next })
-  }
+  }, [nodes, edges, generation, queueStreamDelta, clearQueuedStreamDelta])
 
-  // --- Delete node ---
-  function handleDeleteNode(nodeId: string) {
-    setNodes((current) => current.filter((n) => n.id !== nodeId))
-    setEdges((current) => current.filter((e) => e.fromNodeId !== nodeId && e.toNodeId !== nodeId))
-    if (focusedNodeId === nodeId) setFocusedNodeId(null)
-  }
+  const handleDeleteNode = useCallback((nodeId: string) => {
+    setNodes((current) => current.filter((node) => node.id !== nodeId))
+    setEdges((current) => current.filter((edge) => edge.fromNodeId !== nodeId && edge.toNodeId !== nodeId))
+    setTopologyVersion((version) => version + 1)
+    setFocusedNodeId((current) => (current === nodeId ? null : current))
+  }, [])
 
-  // --- React Flow event handlers ---
+  const rfNodes = useMemo(
+    () =>
+      toRFNodes(nodes, {
+        semanticLevel: "all",
+        semanticMode: "manual",
+        selectedIds: selection.nodeIds,
+        onAddChild: handleAddChild,
+        onRegenerate: (nodeId) => {
+          void handleRegenerate(nodeId)
+        },
+        onDeleteNode: handleDeleteNode,
+        onSetColor: handleNodeColorChange,
+        onPromptEditStart: handleStartPromptEdit,
+        onPromptSubmit: handlePromptSubmit,
+        onResize: handleNodeResize,
+        streamingNodeIds,
+        editingNodeId,
+        focusedNodeId,
+      }),
+    [
+      nodes,
+      selection.nodeIds,
+      handleAddChild,
+      handleRegenerate,
+      handleDeleteNode,
+      handleNodeColorChange,
+      handleStartPromptEdit,
+      handlePromptSubmit,
+      handleNodeResize,
+      streamingNodeIds,
+      editingNodeId,
+      focusedNodeId,
+    ],
+  )
+
+  const rfEdges = useMemo(() => toRFEdges(edges), [edges])
+
   const onNodesChange: OnNodesChange = useCallback((changes) => {
+    // React Flow can send many node changes in one event.
+    // We collect everything first, then write state once for better performance.
+    const positionChanges = new Map<string, { x: number; y: number; isFinal: boolean }>()
+    const dimensionChanges = new Map<string, { width: number; height: number }>()
+    const removedNodeIds = new Set<string>()
+    const selectedIdsToAdd = new Set<string>()
+    const selectedIdsToRemove = new Set<string>()
+
     for (const change of changes) {
       if (change.type === "position" && change.position) {
-        // Update position on every frame during drag for smooth movement
         const isFinal = !change.dragging
         updateForceNodePosition(forceNodeLookupRef.current, change.id, change.position.x, change.position.y)
         if (change.dragging) {
@@ -1023,43 +1192,112 @@ function CanvasBoardInner({
           releaseForceNode(forceNodeLookupRef.current, change.id)
           reheatSimulation(forceSimulationRef.current)
         }
-        setNodes((current) => current.map((n) =>
-          n.id === change.id
-            ? { ...n, position: { x: change.position!.x, y: change.position!.y }, ...(isFinal ? { updatedAt: new Date().toISOString() } : {}) }
-            : n
-        ))
-      }
-      if (change.type === "select") {
-        setSelection((current) => {
-          const ids = change.selected
-            ? [...new Set([...current.nodeIds, change.id])]
-            : current.nodeIds.filter((id) => id !== change.id)
-          return { ...current, nodeIds: ids }
+        positionChanges.set(change.id, {
+          x: change.position.x,
+          y: change.position.y,
+          isFinal,
         })
       }
-      if (change.type === "remove") {
-        handleDeleteNode(change.id)
+      if (change.type === "select") {
+        if (change.selected) {
+          selectedIdsToAdd.add(change.id)
+          selectedIdsToRemove.delete(change.id)
+        } else {
+          selectedIdsToRemove.add(change.id)
+          selectedIdsToAdd.delete(change.id)
+        }
       }
-      // Capture initial auto-measurement from React Flow to make nodes resizable.
-      // User resize persistence is handled by NodeResizer onResizeEnd.
+      if (change.type === "remove") {
+        removedNodeIds.add(change.id)
+      }
       if (change.type === "dimensions" && change.dimensions) {
-        setNodes((current) => current.map((n) => {
-          // Only store measured dimensions if node doesn't already have explicit dimensions
-          // This captures the initial measurement but ignores subsequent auto-measurements
-          if (n.id === change.id && !n.dimensions) {
-            return { ...n, dimensions: { width: change.dimensions!.width, height: change.dimensions!.height } }
-          }
-          return n
-        }))
+        dimensionChanges.set(change.id, { width: change.dimensions.width, height: change.dimensions.height })
       }
     }
-  }, [focusedNodeId])
+
+    if (positionChanges.size > 0 || dimensionChanges.size > 0 || removedNodeIds.size > 0) {
+      const now = new Date().toISOString()
+      setNodes((currentNodes) => {
+        let changed = false
+        let nextNodes = currentNodes
+
+        if (removedNodeIds.size > 0) {
+          const filtered = nextNodes.filter((node) => !removedNodeIds.has(node.id))
+          if (filtered.length !== nextNodes.length) {
+            changed = true
+            nextNodes = filtered
+          }
+        }
+
+        const mappedNodes = nextNodes.map((node) => {
+          const position = positionChanges.get(node.id)
+          const dimensions = dimensionChanges.get(node.id)
+          let updatedNode = node
+
+          if (position) {
+            updatedNode = {
+              ...updatedNode,
+              position: { x: position.x, y: position.y },
+              ...(position.isFinal ? { updatedAt: now } : {}),
+            }
+          }
+
+          if (dimensions && !updatedNode.dimensions) {
+            updatedNode = {
+              ...updatedNode,
+              dimensions: { width: dimensions.width, height: dimensions.height },
+            }
+          }
+
+          if (updatedNode !== node) {
+            changed = true
+          }
+
+          return updatedNode
+        })
+
+        return changed ? mappedNodes : currentNodes
+      })
+    }
+
+    if (selectedIdsToAdd.size > 0 || selectedIdsToRemove.size > 0 || removedNodeIds.size > 0) {
+      setSelection((currentSelection) => {
+        const nextIds = new Set(currentSelection.nodeIds)
+        for (const nodeId of selectedIdsToAdd) {
+          nextIds.add(nodeId)
+        }
+        for (const nodeId of selectedIdsToRemove) {
+          nextIds.delete(nodeId)
+        }
+        for (const nodeId of removedNodeIds) {
+          nextIds.delete(nodeId)
+        }
+        return { ...currentSelection, nodeIds: Array.from(nextIds) }
+      })
+    }
+
+    if (removedNodeIds.size > 0) {
+      setEdges((currentEdges) =>
+        currentEdges.filter((edge) => !removedNodeIds.has(edge.fromNodeId) && !removedNodeIds.has(edge.toNodeId)),
+      )
+      setTopologyVersion((version) => version + 1)
+      setFocusedNodeId((currentFocusedNodeId) =>
+        currentFocusedNodeId && removedNodeIds.has(currentFocusedNodeId) ? null : currentFocusedNodeId,
+      )
+    }
+  }, [])
 
   const onEdgesChange: OnEdgesChange = useCallback((changes) => {
+    let removed = false
     for (const change of changes) {
       if (change.type === "remove") {
-        setEdges((current) => current.filter((e) => e.id !== change.id))
+        removed = true
+        setEdges((current) => current.filter((edge) => edge.id !== change.id))
       }
+    }
+    if (removed) {
+      // A removed edge changes graph structure, so force layout should re-run.
+      setTopologyVersion((version) => version + 1)
     }
   }, [])
 
@@ -1086,6 +1324,8 @@ function CanvasBoardInner({
     })
 
     if (added) {
+      // New edge means a new graph topology; reheat simulation for quick settle.
+      setTopologyVersion((version) => version + 1)
       reheatSimulation(forceSimulationRef.current, 0.72)
     }
   }, [canvasId, workspaceId])
@@ -1102,6 +1342,7 @@ function CanvasBoardInner({
 
     const clientPosition = getClientPosition(event)
     const fromPosition = connectionState.from ?? connectionState.pointer ?? { x: 0, y: 0 }
+    // If pointer location is missing, fall back to a reasonable offset from source.
     const dropPosition = clientPosition
       ? screenToFlowPosition(clientPosition)
       : (connectionState.pointer ?? {
@@ -1141,6 +1382,7 @@ function CanvasBoardInner({
 
     setEditingNodeId(child.id)
     setFocusedNodeId(null)
+    setTopologyVersion((version) => version + 1)
     reheatSimulation(forceSimulationRef.current, 0.72)
   }, [canvasId, screenToFlowPosition, workspaceId])
 
@@ -1175,16 +1417,13 @@ function CanvasBoardInner({
     setResponseFollowUpMenu(null)
   }, [])
 
-  // Keyboard shortcuts
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      // Ignore when typing in an input/textarea
       const tag = (e.target as HTMLElement).tagName
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return
 
       const mod = e.metaKey || e.ctrlKey
 
-      // Backspace — delete selected nodes (Mac-friendly alternative to Delete)
       if (e.key === "Backspace" && !mod) {
         for (const id of selection.nodeIds) {
           handleDeleteNode(id)
@@ -1192,14 +1431,12 @@ function CanvasBoardInner({
         return
       }
 
-      // Ctrl/Cmd+A — select all nodes
       if (mod && e.key === "a") {
         e.preventDefault()
-        setSelection({ nodeIds: nodes.map((n) => n.id), edgeIds: [], lassoBounds: null })
+        setSelection({ nodeIds: nodes.map((node) => node.id), edgeIds: [], lassoBounds: null })
         return
       }
 
-      // Escape — deselect all, close detail panel, and stop inline prompt editing
       if (e.key === "Escape") {
         setSelection(createSelectionState())
         setFocusedNodeId(null)
@@ -1211,7 +1448,7 @@ function CanvasBoardInner({
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [selection.nodeIds, nodes])
+  }, [selection.nodeIds, nodes, handleDeleteNode])
 
   return (
     <div className="relative h-full">
@@ -1524,7 +1761,9 @@ function CanvasBoardInner({
 export function CanvasBoard(props: CanvasBoardProps) {
   return (
     <ReactFlowProvider>
-      <CanvasBoardInner {...props} />
+      <TooltipProvider>
+        <CanvasBoardInner {...props} />
+      </TooltipProvider>
     </ReactFlowProvider>
   )
 }
