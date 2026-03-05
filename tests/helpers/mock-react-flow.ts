@@ -62,12 +62,26 @@ vi.mock("@xyflow/react", () => {
 
   const NodeResizer = () => React.createElement("div", { "data-testid": "rf-node-resizer" })
 
+  const BaseEdge = () => React.createElement("path", { "data-testid": "rf-base-edge" })
+
+  const getBezierPath = () => ["M0,0 L1,1", 0, 0] as const
+
+  const useInternalNode = () => ({
+    measured: { width: 240, height: 160 },
+    width: 240,
+    height: 160,
+    internals: {
+      positionAbsolute: { x: 0, y: 0 },
+    },
+  })
+
   const useReactFlow = () => ({
     setViewport: vi.fn(),
     getViewport: vi.fn(() => ({ x: 0, y: 0, zoom: 1 })),
     fitView: vi.fn(),
     zoomIn: vi.fn(),
     zoomOut: vi.fn(),
+    screenToFlowPosition: vi.fn((position: { x: number; y: number }) => position),
   })
 
   return {
@@ -76,8 +90,13 @@ vi.mock("@xyflow/react", () => {
     MiniMap,
     Background,
     BackgroundVariant: { Dots: "dots", Lines: "lines", Cross: "cross" },
+    ConnectionMode: { Loose: "loose", Strict: "strict" },
+    MarkerType: { ArrowClosed: "arrowclosed" },
     Handle,
     NodeResizer,
+    BaseEdge,
+    getBezierPath,
+    useInternalNode,
     Position: { Top: "top", Bottom: "bottom", Left: "left", Right: "right" },
     useReactFlow,
   }

@@ -11,11 +11,10 @@ describe("provider auth method registry", () => {
     ])
   })
 
-  it("returns GitHub Copilot oauth-only method", () => {
-    const methods = getProviderAuthMethods("github-copilot")
-    expect(methods).toHaveLength(1)
-    expect(methods[0]?.type).toBe("oauth")
-    expect(methods[0]?.label).toBe("Login with GitHub Copilot")
+  it("returns merged GitHub API + Copilot OAuth methods", () => {
+    const methods = getProviderAuthMethods("github")
+    expect(methods.map((method) => method.type)).toEqual(["api", "oauth"])
+    expect(methods[1]?.label).toBe("Login with GitHub Copilot")
   })
 
   it("falls back to generic API key method for unknown providers", () => {

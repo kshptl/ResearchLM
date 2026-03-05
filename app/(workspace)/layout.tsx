@@ -17,7 +17,7 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
   return (
     <section className="flex h-screen flex-col">
       {!isDesktop ? (
-        <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800" role="status">
+        <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-500/60 dark:bg-amber-950/50 dark:text-amber-200" role="status">
           Desktop editing is required for this workspace. Editing actions are disabled on this viewport.
         </div>
       ) : null}

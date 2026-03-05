@@ -1,40 +1,63 @@
 "use client"
 
-import React, { useCallback, useEffect, useMemo, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   ReactFlow,
   ReactFlowProvider,
+  useReactFlow,
   MiniMap,
   Background,
   BackgroundVariant,
-  useReactFlow,
+  ConnectionMode,
   type OnNodesChange,
   type OnEdgesChange,
   type OnConnect,
-  type Viewport,
+  type OnConnectEnd,
+  type Connection,
+  type Node,
+  type Edge as RFEdge,
+  type OnNodeDrag,
   type NodeMouseHandler,
+  type FinalConnectionState,
 } from "@xyflow/react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
-import { ExpandActions } from "@/components/workspace/canvas/expand-actions"
-import { HistoryPanel } from "@/components/workspace/canvas/history-panel"
-import { SemanticLegend } from "@/components/workspace/canvas/semantic-legend"
-import { SemanticLevelSelector } from "@/components/workspace/semantic/semantic-level-selector"
-import { CentralPromptBar } from "@/components/workspace/canvas/central-prompt-bar"
+import { CentralPromptBar, type RecentChatOption } from "@/components/workspace/canvas/central-prompt-bar"
+import { edgeTypes } from "@/components/workspace/canvas/flow-edges"
 import { nodeTypes } from "@/components/workspace/canvas/flow-nodes"
+import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { toRFNodes, toRFEdges } from "@/features/graph-model/react-flow-adapters"
+import {
+  DEFAULT_WORKSPACE_MODEL_PREFERENCE,
+  readWorkspaceDefaultModelPreference,
+  subscribeWorkspaceDefaultModelPreference,
+  writeWorkspaceDefaultModelPreference,
+} from "@/features/generation/default-model-preference"
 import { useGeneration } from "@/features/generation/use-generation"
-import { transitionMode, type InteractionMode } from "@/features/graph-model/interaction-mode"
+import { composePromptWithConversationContext } from "@/features/generation/conversation-context"
+import { createFollowUpContextBlocks } from "@/features/generation/context-block"
+import { isValidGraphConnection, isValidReactFlowConnection } from "@/features/graph-model/edge-validation"
+import {
+  collectForcePositions,
+  createForceLayoutSimulation,
+  pinForceNode,
+  releaseForceNode,
+  reheatSimulation,
+  updateForceNodePosition,
+  type ForceLayoutNode,
+  type ForceLayoutSimulation,
+} from "@/features/graph-model/force-layout"
 import { createConversationNode, createEdge } from "@/features/graph-model/mutations"
-import type { Edge as DomainEdge } from "@/features/graph-model/types"
+import type { Canvas, Edge as DomainEdge, HierarchyLink } from "@/features/graph-model/types"
 import {
   createSelectionState,
   type SelectionState,
 } from "@/features/graph-model/selection-state"
 import type { GraphNode } from "@/features/graph-model/types"
 import { getNodeVisualSpec } from "@/features/graph-model/node-visual-contract"
-import { loadSemanticViewState, saveSemanticViewState } from "@/features/persistence/semantic-view-repository"
-import { emitSemanticStateLifecycleLog } from "@/features/persistence/workspace-persistence-service"
 import { getCredentialAuth, type StoredCredential } from "@/lib/auth/credential-store"
 import {
   getCachedProviderModels,
@@ -44,13 +67,7 @@ import {
   upsertCachedProviderModels,
 } from "@/lib/providers/model-cache"
 import type { ProviderAuthCredential } from "@/lib/auth/auth-types"
-import {
-  DEFAULT_SEMANTIC_BREAKPOINTS,
-  resolveSemanticLevel,
-  setManualLevel,
-  setSemanticMode,
-  type SemanticState,
-} from "@/features/semantic-levels/state"
+import { toast } from "sonner"
 
 const MINIMAP_NODE_COLOR: Record<string, string> = {
   topic: "hsl(200, 85%, 72%)",
@@ -71,17 +88,61 @@ const COLOR_PRESETS = [
   { label: "Orange", value: "hsl(25, 90%, 90%)" },
 ]
 
+const MISSING_AUTH_TOAST_ID = "canvas:missing-auth"
+const GENERATION_ERROR_TOAST_ID = "canvas:generation-error"
+const GENERATION_FAILURE_TOAST_ID = "canvas:generation-failure"
+
 function parseExpandItems(raw: string): string[] {
   const lines = raw.split("\n").map((l) => l.replace(/^\d+[\.\)]\s*/, "").trim()).filter(Boolean)
   return lines.slice(0, 3)
 }
 
-type CanvasBoardProps = {
-  onOpenSettings?: () => void
-  credentials?: StoredCredential[]
+function getClientPosition(event: MouseEvent | TouchEvent): { x: number; y: number } | null {
+  if ("clientX" in event && "clientY" in event) {
+    return { x: event.clientX, y: event.clientY }
+  }
+
+  if ("changedTouches" in event && event.changedTouches.length > 0) {
+    const touch = event.changedTouches[0]
+    return { x: touch.clientX, y: touch.clientY }
+  }
+
+  if ("touches" in event && event.touches.length > 0) {
+    const touch = event.touches[0]
+    return { x: touch.clientX, y: touch.clientY }
+  }
+
+  return null
 }
 
-type CatalogProviderOption = {
+type CanvasBoardProps = {
+  workspaceId?: string
+  initialState?: CanvasGraphState
+  recentChats?: RecentChatOption[]
+  onResumeChat?: (chatId: string) => void
+  onGraphStateChange?: (state: CanvasGraphState, reason: "state" | "model" | "initial-prompt") => void
+  onFirstPromptSubmitted?: (payload: { prompt: string; provider: string; model: string }) => void
+  onOpenSettings?: () => void
+  credentials?: StoredCredential[]
+  settingsPanelOpen?: boolean
+  settingsPanelWidthPx?: number
+  onCatalogProvidersChange?: (providers: CatalogProviderOption[]) => void
+}
+
+export type CanvasGraphState = {
+  workspaceId: string
+  activeCanvasId: string
+  canvases: Canvas[]
+  links: HierarchyLink[]
+  nodes: GraphNode[]
+  edges: DomainEdge[]
+  workspaceModelPreference?: {
+    provider: string
+    model: string
+  }
+}
+
+export type CatalogProviderOption = {
   id: string
   name: string
   models: Array<{ id: string; name: string }>
@@ -94,11 +155,21 @@ type ActiveProviderCredential = {
   auth: ProviderAuthCredential
 }
 
+type ResponseFollowUpMenuState = {
+  nodeId: string
+  selectedText: string
+  x: number
+  y: number
+}
+
 function toCredentialVersion(credential: StoredCredential): string {
   return `${credential.id}:${credential.updatedAt}`
 }
 
 function canonicalProviderId(providerId: string): string {
+  if (providerId === "github-models" || providerId === "github-copilot" || providerId === "github-copilot-enterprise") {
+    return "github"
+  }
   if (providerId === "bedrock") {
     return "amazon-bedrock"
   }
@@ -109,36 +180,54 @@ function canonicalProviderId(providerId: string): string {
 }
 
 function activeCredentialsByProvider(credentials: StoredCredential[]): ActiveProviderCredential[] {
-  const byProvider = new Map<string, StoredCredential>()
+  const byProvider = new Map<string, { credential: StoredCredential; auth: ProviderAuthCredential }>()
   for (const credential of credentials) {
     if (credential.status !== "active") {
       continue
     }
     const providerId = canonicalProviderId(credential.provider)
-    const current = byProvider.get(providerId)
-    if (!current || credential.updatedAt > current.updatedAt) {
-      byProvider.set(providerId, credential)
-    }
-  }
-
-  const providers: ActiveProviderCredential[] = []
-  for (const [providerId, credential] of byProvider.entries()) {
     const auth = getCredentialAuth(credential)
     if (!auth) {
       continue
     }
+    const current = byProvider.get(providerId)
+
+    if (!current) {
+      byProvider.set(providerId, { credential, auth })
+      continue
+    }
+
+    if (providerId === "github") {
+      const currentScore = current.auth.type === "api" || current.auth.type === "wellknown" ? 2 : 1
+      const nextScore = auth.type === "api" || auth.type === "wellknown" ? 2 : 1
+      if (nextScore > currentScore) {
+        byProvider.set(providerId, { credential, auth })
+        continue
+      }
+      if (nextScore < currentScore) {
+        continue
+      }
+    }
+
+    if (credential.updatedAt > current.credential.updatedAt) {
+      byProvider.set(providerId, { credential, auth })
+    }
+  }
+
+  const providers: ActiveProviderCredential[] = []
+  for (const [providerId, entry] of byProvider.entries()) {
     providers.push({
       providerId,
       providerName: providerId,
-      credentialVersion: toCredentialVersion(credential),
-      auth,
+      credentialVersion: toCredentialVersion(entry.credential),
+      auth: entry.auth,
     })
   }
 
   return providers
 }
 
-const PROVIDER_SORT_ORDER = ["openai", "anthropic", "github-copilot", "openrouter", "google", "github-models", "amazon-bedrock"] as const
+const PROVIDER_SORT_ORDER = ["openai", "anthropic", "github", "openrouter", "google", "amazon-bedrock"] as const
 
 function providerSortIndex(providerId: string): number {
   const index = PROVIDER_SORT_ORDER.indexOf(providerId as (typeof PROVIDER_SORT_ORDER)[number])
@@ -156,29 +245,53 @@ function sortCatalogProviders(providers: CatalogProviderOption[]): CatalogProvid
   })
 }
 
-function CanvasBoardInner({ onOpenSettings, credentials = [] }: CanvasBoardProps) {
-  const workspaceId = "local-workspace"
-  const canvasId = "root"
-  const { setViewport } = useReactFlow()
-  const [nodes, setNodes] = useState<GraphNode[]>([])
-  const [edges, setEdges] = useState<DomainEdge[]>([])
+function CanvasBoardInner({
+  workspaceId: workspaceIdProp,
+  initialState,
+  recentChats = [],
+  onResumeChat,
+  onGraphStateChange,
+  onFirstPromptSubmitted,
+  onOpenSettings,
+  credentials = [],
+  settingsPanelOpen = false,
+  settingsPanelWidthPx = 320,
+  onCatalogProvidersChange,
+}: CanvasBoardProps) {
+  const workspaceId = workspaceIdProp ?? initialState?.workspaceId ?? "local-workspace"
+  const canvasId = initialState?.activeCanvasId ?? "root"
+  const [canvases] = useState<Canvas[]>(() => initialState?.canvases ?? [])
+  const [links] = useState<HierarchyLink[]>(() => initialState?.links ?? [])
+  const [nodes, setNodes] = useState<GraphNode[]>(() => initialState?.nodes ?? [])
+  const [edges, setEdges] = useState<DomainEdge[]>(() => initialState?.edges ?? [])
   const [selection, setSelection] = useState<SelectionState>(createSelectionState())
-  const [mode, setMode] = useState<InteractionMode>("select")
-  const [zoom, setZoom] = useState(1)
   const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null)
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null)
   const [streamingNodeIds, setStreamingNodeIds] = useState<Set<string>>(new Set())
-  const [semanticState, setSemanticStateValue] = useState<SemanticState>({
-    mode: "auto",
-    level: "all",
-    breakpoints: DEFAULT_SEMANTIC_BREAKPOINTS,
-  })
-  const [semanticHydrated, setSemanticHydrated] = useState(false)
-  const [history, setHistory] = useState<Array<{ id: string; label: string }>>([])
-  const [historyCursor, setHistoryCursor] = useState(-1)
   const [catalogProviders, setCatalogProviders] = useState<CatalogProviderOption[]>([])
-  const [workspaceProvider, setWorkspaceProvider] = useState("openai")
-  const [workspaceModel, setWorkspaceModel] = useState("gpt-5.2")
+  const [workspaceProvider, setWorkspaceProvider] = useState(
+    () => initialState?.workspaceModelPreference?.provider ?? readWorkspaceDefaultModelPreference(DEFAULT_WORKSPACE_MODEL_PREFERENCE).provider,
+  )
+  const [workspaceModel, setWorkspaceModel] = useState(
+    () => initialState?.workspaceModelPreference?.model ?? readWorkspaceDefaultModelPreference(DEFAULT_WORKSPACE_MODEL_PREFERENCE).model,
+  )
+  const [dismissedMissingCredentialsNotice, setDismissedMissingCredentialsNotice] = useState(false)
+  const [responseFollowUpMenu, setResponseFollowUpMenu] = useState<ResponseFollowUpMenuState | null>(null)
+  const [forceLayoutNonce, setForceLayoutNonce] = useState(0)
+  const forceSimulationRef = useRef<ForceLayoutSimulation | null>(null)
+  const forceNodeLookupRef = useRef<Map<string, ForceLayoutNode>>(new Map())
+  const forceTickRafRef = useRef<number | null>(null)
+  const pendingForcePositionsRef = useRef<Map<string, { x: number; y: number }> | null>(null)
+  const { screenToFlowPosition } = useReactFlow()
+
+  const activeProviders = useMemo(() => activeCredentialsByProvider(credentials), [credentials])
+  const hasActiveCredentials = activeProviders.length > 0
+
+  const updateWorkspaceModelSelection = useCallback((provider: string, model: string) => {
+    setWorkspaceProvider(provider)
+    setWorkspaceModel(model)
+    writeWorkspaceDefaultModelPreference({ provider, model })
+  }, [])
 
   const generation = useGeneration({
     provider: workspaceProvider,
@@ -208,18 +321,244 @@ function CanvasBoardInner({ onOpenSettings, credentials = [] }: CanvasBoardProps
     return options
   }, [catalogProviders])
 
-  const displayLevel = resolveSemanticLevel(semanticState, zoom)
   const focusedNode = focusedNodeId ? nodes.find((n) => n.id === focusedNodeId) ?? null : null
+  const focusedNodeContextBlocks = (focusedNode?.promptContextBlocks ?? [])
+    .map((block) => block.trim())
+    .filter((block) => block.length > 0)
+  const nodePanelRightPx = settingsPanelOpen ? settingsPanelWidthPx + 24 : 12
+  const forceLayoutSignature = useMemo(() => {
+    const nodeShapeSignature = [...nodes]
+      .sort((left, right) => left.id.localeCompare(right.id))
+      .map((node) => node.id)
+      .join("|")
+
+    const edgeSignature = [...edges]
+      .sort((left, right) => left.id.localeCompare(right.id))
+      .map((edge) => `${edge.fromNodeId}->${edge.toNodeId}`)
+      .join("|")
+
+    return `${nodeShapeSignature}::${edgeSignature}::${forceLayoutNonce}`
+  }, [edges, forceLayoutNonce, nodes])
+
+  useEffect(() => {
+    return subscribeWorkspaceDefaultModelPreference((preference) => {
+      setWorkspaceProvider(preference.provider)
+      setWorkspaceModel(preference.model)
+    })
+  }, [])
+
+  useEffect(() => {
+    onCatalogProvidersChange?.(catalogProviders)
+  }, [catalogProviders, onCatalogProvidersChange])
+
+  useEffect(() => {
+    if (hasActiveCredentials) {
+      setDismissedMissingCredentialsNotice(false)
+    }
+  }, [hasActiveCredentials])
+
+  useEffect(() => {
+    if (!hasActiveCredentials && !dismissedMissingCredentialsNotice) {
+      toast.warning("No active provider credentials. Open Settings to authenticate and enable model selection.", {
+        id: MISSING_AUTH_TOAST_ID,
+        duration: Number.POSITIVE_INFINITY,
+        action: onOpenSettings
+          ? {
+              label: "Open settings panel",
+              onClick: onOpenSettings,
+            }
+          : undefined,
+        cancel: {
+          label: "Dismiss auth notice",
+          onClick: () => setDismissedMissingCredentialsNotice(true),
+        },
+      })
+      return
+    }
+
+    toast.dismiss(MISSING_AUTH_TOAST_ID)
+  }, [dismissedMissingCredentialsNotice, hasActiveCredentials, onOpenSettings])
+
+  useEffect(() => {
+    if (generation.failureNotice) {
+      toast.dismiss(GENERATION_ERROR_TOAST_ID)
+      toast.warning(generation.failureNotice.message, {
+        id: GENERATION_FAILURE_TOAST_ID,
+      })
+      return
+    }
+
+    toast.dismiss(GENERATION_FAILURE_TOAST_ID)
+    if (generation.error) {
+      toast.error(generation.error, { id: GENERATION_ERROR_TOAST_ID })
+      return
+    }
+    toast.dismiss(GENERATION_ERROR_TOAST_ID)
+  }, [generation.error, generation.failureNotice])
+
+  useEffect(() => {
+    return () => {
+      toast.dismiss(MISSING_AUTH_TOAST_ID)
+      toast.dismiss(GENERATION_ERROR_TOAST_ID)
+      toast.dismiss(GENERATION_FAILURE_TOAST_ID)
+    }
+  }, [])
+
+  useEffect(() => {
+    setResponseFollowUpMenu(null)
+  }, [focusedNodeId])
+
+  useEffect(() => {
+    if (!responseFollowUpMenu) {
+      return
+    }
+
+    function handlePointerDown(event: MouseEvent): void {
+      const target = event.target as HTMLElement | null
+      if (target?.closest("[data-response-followup-menu='true']")) {
+        return
+      }
+      setResponseFollowUpMenu(null)
+    }
+
+    function handleEscape(event: KeyboardEvent): void {
+      if (event.key === "Escape") {
+        setResponseFollowUpMenu(null)
+      }
+    }
+
+    window.addEventListener("mousedown", handlePointerDown)
+    window.addEventListener("keydown", handleEscape)
+    return () => {
+      window.removeEventListener("mousedown", handlePointerDown)
+      window.removeEventListener("keydown", handleEscape)
+    }
+  }, [responseFollowUpMenu])
+
+  useEffect(() => {
+    if (!editingNodeId) {
+      return
+    }
+
+    function handlePointerDown(event: MouseEvent): void {
+      const target = event.target as HTMLElement | null
+      if (target?.closest(`[data-node-editor-id="${editingNodeId}"]`)) {
+        return
+      }
+      setEditingNodeId(null)
+    }
+
+    window.addEventListener("mousedown", handlePointerDown)
+    return () => {
+      window.removeEventListener("mousedown", handlePointerDown)
+    }
+  }, [editingNodeId])
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return
+    }
+
+    if (nodes.length < 2) {
+      forceSimulationRef.current?.stop()
+      forceSimulationRef.current = null
+      forceNodeLookupRef.current = new Map()
+      if (forceTickRafRef.current !== null) {
+        window.cancelAnimationFrame(forceTickRafRef.current)
+        forceTickRafRef.current = null
+      }
+      return
+    }
+
+    const { simulation, nodeLookup } = createForceLayoutSimulation(nodes, edges)
+    forceSimulationRef.current?.stop()
+    forceSimulationRef.current = simulation
+    forceNodeLookupRef.current = nodeLookup
+
+    const flushTick = () => {
+      forceTickRafRef.current = null
+      const nextPositions = pendingForcePositionsRef.current
+      if (!nextPositions || nextPositions.size === 0) {
+        return
+      }
+
+      setNodes((current) => {
+        let changed = false
+        const nextNodes = current.map((node) => {
+          const position = nextPositions.get(node.id)
+          if (!position) {
+            return node
+          }
+          if (Math.abs(node.position.x - position.x) < 0.5 && Math.abs(node.position.y - position.y) < 0.5) {
+            return node
+          }
+          changed = true
+          return {
+            ...node,
+            position: { x: position.x, y: position.y },
+          }
+        })
+        return changed ? nextNodes : current
+      })
+    }
+
+    simulation.on("tick", () => {
+      pendingForcePositionsRef.current = collectForcePositions(nodeLookup)
+      if (forceTickRafRef.current !== null) {
+        return
+      }
+      forceTickRafRef.current = window.requestAnimationFrame(flushTick)
+    })
+
+    reheatSimulation(simulation, 0.6)
+
+    return () => {
+      simulation.stop()
+      if (forceTickRafRef.current !== null) {
+        window.cancelAnimationFrame(forceTickRafRef.current)
+        forceTickRafRef.current = null
+      }
+    }
+  }, [forceLayoutSignature])
+
+  useEffect(() => {
+    onGraphStateChange?.(
+      {
+        workspaceId,
+        activeCanvasId: canvasId,
+        canvases,
+        links,
+        nodes,
+        edges,
+        workspaceModelPreference: {
+          provider: workspaceProvider,
+          model: workspaceModel,
+        },
+      },
+      "state",
+    )
+  }, [
+    canvasId,
+    canvases,
+    edges,
+    links,
+    nodes,
+    onGraphStateChange,
+    workspaceId,
+    workspaceModel,
+    workspaceProvider,
+  ])
 
   // Callbacks for nodes (stable refs for memoization)
-  const handleAddChild = useCallback((parentNodeId: string) => {
+  const handleAddChild = useCallback((parentNodeId: string, initialPrompt = "", promptContextBlocks?: string[]) => {
     const parent = nodes.find((n) => n.id === parentNodeId)
     if (!parent) return
 
     const child = createConversationNode({
       workspaceId,
       canvasId,
-      prompt: "",
+      prompt: initialPrompt,
+      promptContextBlocks,
       content: "",
       x: parent.position.x + (Math.random() - 0.5) * 200,
       y: parent.position.y + 180 + Math.random() * 60,
@@ -233,34 +572,87 @@ function CanvasBoardInner({ onOpenSettings, credentials = [] }: CanvasBoardProps
     ])
     setEditingNodeId(child.id)
     setFocusedNodeId(null)
-    appendHistory("Add follow-up node")
   }, [nodes, canvasId, workspaceId])
 
-  // Build conversation context by walking parent chain
-  function buildConversationContext(nodeId: string): string {
-    const chain: GraphNode[] = []
-    let current = nodes.find((n) => n.id === nodeId)
-    while (current?.sourceNodeId) {
-      const parent = nodes.find((n) => n.id === current!.sourceNodeId)
-      if (!parent) break
-      chain.unshift(parent)
-      current = parent
+  const handleStartPromptEdit = useCallback((nodeId: string) => {
+    setEditingNodeId(nodeId)
+    setFocusedNodeId(null)
+  }, [])
+
+  const handleResponseContextMenu = useCallback(
+    (event: React.MouseEvent<HTMLDivElement>, nodeId: string) => {
+      const selection = window.getSelection()
+      if (!selection || selection.rangeCount === 0) {
+        setResponseFollowUpMenu(null)
+        return
+      }
+
+      const selectedText = selection.toString().trim()
+      const anchorNode = selection.anchorNode
+      const focusNode = selection.focusNode
+      if (
+        !selectedText ||
+        !anchorNode ||
+        !focusNode ||
+        !event.currentTarget.contains(anchorNode) ||
+        !event.currentTarget.contains(focusNode)
+      ) {
+        setResponseFollowUpMenu(null)
+        return
+      }
+
+      event.preventDefault()
+      setResponseFollowUpMenu({
+        nodeId,
+        selectedText,
+        x: Math.max(8, Math.min(event.clientX, window.innerWidth - 176)),
+        y: Math.max(8, Math.min(event.clientY, window.innerHeight - 52)),
+      })
+    },
+    []
+  )
+
+  const handleFollowUpFromResponseSelection = useCallback(() => {
+    if (!responseFollowUpMenu) {
+      return
     }
-    if (chain.length === 0) return ""
-    return chain.map((n) => {
-      const parts: string[] = []
-      if (n.prompt) parts.push(`User: ${n.prompt}`)
-      if (n.content) parts.push(`Assistant: ${n.content}`)
-      return parts.join("\n")
-    }).join("\n\n")
-  }
+    handleAddChild(responseFollowUpMenu.nodeId, "", createFollowUpContextBlocks(responseFollowUpMenu.selectedText))
+    setResponseFollowUpMenu(null)
+  }, [handleAddChild, responseFollowUpMenu])
 
   const handleNodeResize = useCallback((nodeId: string, width: number, height: number, isFinal: boolean = true) => {
-    setNodes((current) => current.map((n) =>
-      n.id === nodeId
-        ? { ...n, dimensions: { width, height }, ...(isFinal ? { updatedAt: new Date().toISOString() } : {}) }
-        : n
-    ))
+    setNodes((current) => current.map((n) => {
+      if (n.id !== nodeId) {
+        return n
+      }
+
+      const currentWidth = n.dimensions?.width ?? 0
+      const currentHeight = n.dimensions?.height ?? 0
+      if (Math.abs(currentWidth - width) < 0.5 && Math.abs(currentHeight - height) < 0.5) {
+        return n
+      }
+
+      return {
+        ...n,
+        dimensions: { width, height },
+        ...(isFinal ? { updatedAt: new Date().toISOString() } : {}),
+      }
+    }))
+
+    if (isFinal) {
+      // Recreate force layout once after resize completes so collision radii reflect final dimensions.
+      setForceLayoutNonce((value) => value + 1)
+    }
+  }, [])
+
+  const handleNodeColorChange = useCallback((nodeId: string, colorToken?: string) => {
+    setNodes((current) =>
+      current.map((node) =>
+        node.id === nodeId
+          ? { ...node, colorToken, updatedAt: new Date().toISOString() }
+          : node,
+      ),
+    )
   }, [])
 
   const handlePromptSubmit = useCallback(async (nodeId: string, prompt: string) => {
@@ -275,11 +667,7 @@ function CanvasBoardInner({ onOpenSettings, credentials = [] }: CanvasBoardProps
       ? { provider: node.providerOverride.provider, model: node.providerOverride.model }
       : undefined
 
-    // Build context from parent conversation chain
-    const context = buildConversationContext(nodeId)
-    const fullPrompt = context
-      ? `${context}\n\nUser: ${prompt}`
-      : prompt
+    const fullPrompt = composePromptWithConversationContext(nodes, edges, nodeId, prompt, node?.promptContextBlocks)
 
     const text = await generation.runIntent("prompt", fullPrompt, {
       overrides,
@@ -294,43 +682,44 @@ function CanvasBoardInner({ onOpenSettings, credentials = [] }: CanvasBoardProps
       n.id === nodeId ? { ...n, content: text, updatedAt: new Date().toISOString() } : n
     ))
     setStreamingNodeIds((s) => { const next = new Set(s); next.delete(nodeId); return next })
-    appendHistory("Generated response")
-  }, [nodes, generation])
+  }, [nodes, edges, generation])
 
   const rfNodes = useMemo(
     () =>
       toRFNodes(nodes, {
-        semanticLevel: displayLevel,
-        semanticMode: semanticState.mode,
+        semanticLevel: "all",
+        semanticMode: "manual",
         selectedIds: selection.nodeIds,
         onAddChild: handleAddChild,
+        onRegenerate: (nodeId) => {
+          void handleRegenerate(nodeId)
+        },
+        onDeleteNode: handleDeleteNode,
+        onSetColor: handleNodeColorChange,
+        onPromptEditStart: handleStartPromptEdit,
         onPromptSubmit: handlePromptSubmit,
         onResize: handleNodeResize,
         streamingNodeIds,
         editingNodeId,
+        focusedNodeId,
       }),
-    [nodes, displayLevel, semanticState.mode, selection.nodeIds, handleAddChild, handlePromptSubmit, handleNodeResize, streamingNodeIds, editingNodeId]
+    [
+      nodes,
+      selection.nodeIds,
+      handleAddChild,
+      handleRegenerate,
+      handleDeleteNode,
+      handleNodeColorChange,
+      handleStartPromptEdit,
+      handlePromptSubmit,
+      handleNodeResize,
+      streamingNodeIds,
+      editingNodeId,
+      focusedNodeId,
+    ]
   )
 
   const rfEdges = useMemo(() => toRFEdges(edges), [edges])
-
-  // Hydrate semantic state
-  useEffect(() => {
-    let cancelled = false
-    void (async () => {
-      const saved = await loadSemanticViewState(workspaceId, canvasId)
-      if (cancelled) return
-      if (saved) {
-        setSemanticStateValue((current) => ({
-          ...current,
-          mode: saved.mode,
-          level: saved.manualLevel ?? current.level,
-        }))
-      }
-      setSemanticHydrated(true)
-    })()
-    return () => { cancelled = true }
-  }, [canvasId, workspaceId])
 
   useEffect(() => {
     if (typeof fetch !== "function") {
@@ -338,7 +727,6 @@ function CanvasBoardInner({ onOpenSettings, credentials = [] }: CanvasBoardProps
     }
 
     pruneProviderModelCache()
-    const activeProviders = activeCredentialsByProvider(credentials)
     if (activeProviders.length === 0) {
       setCatalogProviders([])
       return
@@ -456,7 +844,7 @@ function CanvasBoardInner({ onOpenSettings, credentials = [] }: CanvasBoardProps
     return () => {
       cancelled = true
     }
-  }, [credentials])
+  }, [activeProviders])
 
   useEffect(() => {
     if (catalogProviders.length === 0) {
@@ -475,39 +863,17 @@ function CanvasBoardInner({ onOpenSettings, credentials = [] }: CanvasBoardProps
       return
     }
 
-    setWorkspaceProvider(preferredProvider.id)
-    setWorkspaceModel(preferredModel.id)
-  }, [catalogProviders, workspaceModel, workspaceProvider])
-
-  useEffect(() => {
-    if (!semanticHydrated) return
-    void saveSemanticViewState({
-      workspaceId, canvasId,
-      mode: semanticState.mode,
-      manualLevel: semanticState.mode === "manual" ? semanticState.level : undefined,
-    })
-  }, [canvasId, semanticHydrated, semanticState.level, semanticState.mode, workspaceId])
-
-  useEffect(() => {
-    if (!semanticHydrated) return
-    void emitSemanticStateLifecycleLog({
-      workspaceId, canvasId,
-      mode: semanticState.mode,
-      activeLevel: displayLevel,
-      zoom,
-    })
-  }, [canvasId, displayLevel, semanticHydrated, semanticState.mode, workspaceId, zoom])
-
-  function appendHistory(label: string) {
-    setHistory((current) => {
-      const next = [...current, { id: crypto.randomUUID(), label }]
-      setHistoryCursor(next.length - 1)
-      return next
-    })
-  }
+    updateWorkspaceModelSelection(preferredProvider.id, preferredModel.id)
+  }, [catalogProviders, updateWorkspaceModelSelection, workspaceModel, workspaceProvider])
 
   // --- Initial prompt from central bar ---
   async function handleInitialPrompt(prompt: string) {
+    onFirstPromptSubmitted?.({
+      prompt,
+      provider: workspaceProvider,
+      model: workspaceModel,
+    })
+
     const nodeId = crypto.randomUUID()
     const now = new Date().toISOString()
     const newNode: GraphNode = {
@@ -536,7 +902,6 @@ function CanvasBoardInner({ onOpenSettings, credentials = [] }: CanvasBoardProps
       n.id === nodeId ? { ...n, content: text, updatedAt: new Date().toISOString() } : n
     ))
     setStreamingNodeIds(new Set())
-    appendHistory("Initial exploration")
   }
 
   // --- Batch expand (Questions / Subtopics) ---
@@ -581,7 +946,6 @@ function CanvasBoardInner({ onOpenSettings, credentials = [] }: CanvasBoardProps
         setStreamingNodeIds((s) => { const next = new Set(s); next.delete(child.id); return next })
       })()
     }
-    appendHistory(`Expand ${intent}`)
   }
 
   // --- Summarize ---
@@ -603,7 +967,6 @@ function CanvasBoardInner({ onOpenSettings, credentials = [] }: CanvasBoardProps
       n.id === nodeId ? { ...n, content: text, updatedAt: new Date().toISOString() } : n
     ))
     setStreamingNodeIds((s) => { const next = new Set(s); next.delete(nodeId); return next })
-    appendHistory("Summarize")
   }
 
   // --- Regenerate ---
@@ -617,7 +980,15 @@ function CanvasBoardInner({ onOpenSettings, credentials = [] }: CanvasBoardProps
       ? { provider: node.providerOverride.provider, model: node.providerOverride.model }
       : undefined
 
-    const text = await generation.runIntent("prompt", node.prompt, {
+    const fullPrompt = composePromptWithConversationContext(
+      nodes,
+      edges,
+      nodeId,
+      node.prompt,
+      node.promptContextBlocks,
+    )
+
+    const text = await generation.runIntent("prompt", fullPrompt, {
       overrides,
       onDelta: (chunk) => {
         setNodes((current) => current.map((n) =>
@@ -630,7 +1001,6 @@ function CanvasBoardInner({ onOpenSettings, credentials = [] }: CanvasBoardProps
       n.id === nodeId ? { ...n, content: text, updatedAt: new Date().toISOString() } : n
     ))
     setStreamingNodeIds((s) => { const next = new Set(s); next.delete(nodeId); return next })
-    appendHistory("Regenerate")
   }
 
   // --- Delete node ---
@@ -638,7 +1008,6 @@ function CanvasBoardInner({ onOpenSettings, credentials = [] }: CanvasBoardProps
     setNodes((current) => current.filter((n) => n.id !== nodeId))
     setEdges((current) => current.filter((e) => e.fromNodeId !== nodeId && e.toNodeId !== nodeId))
     if (focusedNodeId === nodeId) setFocusedNodeId(null)
-    appendHistory("Delete node")
   }
 
   // --- React Flow event handlers ---
@@ -647,6 +1016,13 @@ function CanvasBoardInner({ onOpenSettings, credentials = [] }: CanvasBoardProps
       if (change.type === "position" && change.position) {
         // Update position on every frame during drag for smooth movement
         const isFinal = !change.dragging
+        updateForceNodePosition(forceNodeLookupRef.current, change.id, change.position.x, change.position.y)
+        if (change.dragging) {
+          pinForceNode(forceNodeLookupRef.current, change.id, change.position.x, change.position.y)
+        } else {
+          releaseForceNode(forceNodeLookupRef.current, change.id)
+          reheatSimulation(forceSimulationRef.current)
+        }
         setNodes((current) => current.map((n) =>
           n.id === change.id
             ? { ...n, position: { x: change.position!.x, y: change.position!.y }, ...(isFinal ? { updatedAt: new Date().toISOString() } : {}) }
@@ -664,8 +1040,8 @@ function CanvasBoardInner({ onOpenSettings, credentials = [] }: CanvasBoardProps
       if (change.type === "remove") {
         handleDeleteNode(change.id)
       }
-      // Capture initial auto-measurement from React Flow to make nodes resizable
-      // User resize drags are handled by NodeResizer onResize/onResizeEnd callbacks
+      // Capture initial auto-measurement from React Flow to make nodes resizable.
+      // User resize persistence is handled by NodeResizer onResizeEnd.
       if (change.type === "dimensions" && change.dimensions) {
         setNodes((current) => current.map((n) => {
           // Only store measured dimensions if node doesn't already have explicit dimensions
@@ -689,21 +1065,115 @@ function CanvasBoardInner({ onOpenSettings, credentials = [] }: CanvasBoardProps
 
   const onConnect: OnConnect = useCallback((connection) => {
     if (!connection.source || !connection.target) return
-    setEdges((current) => [
-      ...current,
-      createEdge({ workspaceId, canvasId, fromNodeId: connection.source!, toNodeId: connection.target! }),
-    ])
-    appendHistory("Connect nodes")
+
+    let added = false
+    setEdges((current) => {
+      if (
+        !isValidGraphConnection({
+          sourceId: connection.source,
+          targetId: connection.target,
+          edges: current,
+        })
+      ) {
+        return current
+      }
+
+      added = true
+      return [
+        ...current,
+        createEdge({ workspaceId, canvasId, fromNodeId: connection.source, toNodeId: connection.target }),
+      ]
+    })
+
+    if (added) {
+      reheatSimulation(forceSimulationRef.current, 0.72)
+    }
   }, [canvasId, workspaceId])
 
-  const onViewportChange = useCallback((viewport: Viewport) => { setZoom(viewport.zoom) }, [])
+  const onConnectEnd: OnConnectEnd = useCallback((event, connectionState: FinalConnectionState) => {
+    if (!connectionState.fromNode || connectionState.toNode) {
+      return
+    }
+
+    const fromNodeId = connectionState.fromNode.id
+    if (!fromNodeId) {
+      return
+    }
+
+    const clientPosition = getClientPosition(event)
+    const fromPosition = connectionState.from ?? connectionState.pointer ?? { x: 0, y: 0 }
+    const dropPosition = clientPosition
+      ? screenToFlowPosition(clientPosition)
+      : (connectionState.pointer ?? {
+          x: fromPosition.x + 220,
+          y: fromPosition.y + 140,
+        })
+
+    const child = createConversationNode({
+      workspaceId,
+      canvasId,
+      prompt: "",
+      content: "",
+      x: dropPosition.x - 150,
+      y: dropPosition.y - 110,
+      sourceNodeId: fromNodeId,
+    })
+
+    const isSourceStart = connectionState.fromHandle?.type !== "target"
+    const edgeFrom = isSourceStart ? fromNodeId : child.id
+    const edgeTo = isSourceStart ? child.id : fromNodeId
+
+    setNodes((current) => [...current, child])
+    setEdges((current) => {
+      if (!isValidGraphConnection({ sourceId: edgeFrom, targetId: edgeTo, edges: current })) {
+        return current
+      }
+      return [
+        ...current,
+        createEdge({
+          workspaceId,
+          canvasId,
+          fromNodeId: edgeFrom,
+          toNodeId: edgeTo,
+        }),
+      ]
+    })
+
+    setEditingNodeId(child.id)
+    setFocusedNodeId(null)
+    reheatSimulation(forceSimulationRef.current, 0.72)
+  }, [canvasId, screenToFlowPosition, workspaceId])
+
+  const isValidConnection = useCallback(
+    (connection: Connection | RFEdge) => isValidReactFlowConnection(connection, edges),
+    [edges]
+  )
+
+  const onNodeDragStart: OnNodeDrag = useCallback((_event, node: Node) => {
+    pinForceNode(forceNodeLookupRef.current, node.id, node.position.x, node.position.y)
+    reheatSimulation(forceSimulationRef.current, 0.75)
+  }, [])
+
+  const onNodeDrag: OnNodeDrag = useCallback((_event, node: Node) => {
+    pinForceNode(forceNodeLookupRef.current, node.id, node.position.x, node.position.y)
+  }, [])
+
+  const onNodeDragStop: OnNodeDrag = useCallback((_event, node: Node) => {
+    updateForceNodePosition(forceNodeLookupRef.current, node.id, node.position.x, node.position.y)
+    releaseForceNode(forceNodeLookupRef.current, node.id)
+    reheatSimulation(forceSimulationRef.current, 0.55)
+  }, [])
 
   const onNodeClick: NodeMouseHandler = useCallback((_event, node) => {
     if (editingNodeId === node.id) return // don't open panel while editing
     setFocusedNodeId((current) => (current === node.id ? null : node.id))
   }, [editingNodeId])
 
-  const onPaneClick = useCallback(() => { setFocusedNodeId(null) }, [])
+  const onPaneClick = useCallback(() => {
+    setFocusedNodeId(null)
+    setEditingNodeId(null)
+    setResponseFollowUpMenu(null)
+  }, [])
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -729,31 +1199,19 @@ function CanvasBoardInner({ onOpenSettings, credentials = [] }: CanvasBoardProps
         return
       }
 
-      // Escape — deselect all, close detail panel
+      // Escape — deselect all, close detail panel, and stop inline prompt editing
       if (e.key === "Escape") {
         setSelection(createSelectionState())
         setFocusedNodeId(null)
+        setEditingNodeId(null)
         return
       }
 
-      // Ctrl/Cmd+Z — undo
-      if (mod && e.key === "z" && !e.shiftKey) {
-        e.preventDefault()
-        setHistoryCursor((c) => Math.max(-1, c - 1))
-        return
-      }
-
-      // Ctrl/Cmd+Shift+Z — redo
-      if (mod && e.key === "z" && e.shiftKey) {
-        e.preventDefault()
-        setHistoryCursor((c) => Math.min(history.length - 1, c + 1))
-        return
-      }
     }
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [selection.nodeIds, nodes, history.length])
+  }, [selection.nodeIds, nodes])
 
   return (
     <div className="relative h-full">
@@ -764,13 +1222,14 @@ function CanvasBoardInner({ onOpenSettings, credentials = [] }: CanvasBoardProps
           disabled={generation.isStreaming}
           modelOptions={initialModelOptions}
           selectedModelValue={`${workspaceProvider}::${workspaceModel}`}
+          recentChats={recentChats}
+          onResumeChat={onResumeChat}
           onSelectModel={(value) => {
             const descriptor = modelValueToDescriptor.get(value)
             if (!descriptor) {
               return
             }
-            setWorkspaceProvider(descriptor.providerId)
-            setWorkspaceModel(descriptor.modelId)
+            updateWorkspaceModelSelection(descriptor.providerId, descriptor.modelId)
           }}
         />
       ) : null}
@@ -780,18 +1239,24 @@ function CanvasBoardInner({ onOpenSettings, credentials = [] }: CanvasBoardProps
         nodes={rfNodes}
         edges={rfEdges}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
-        onViewportChange={onViewportChange}
+        onConnectEnd={onConnectEnd}
+        isValidConnection={isValidConnection}
+        connectionMode={ConnectionMode.Loose}
         onNodeClick={onNodeClick}
+        onNodeDragStart={onNodeDragStart}
+        onNodeDrag={onNodeDrag}
+        onNodeDragStop={onNodeDragStop}
         onPaneClick={onPaneClick}
         deleteKeyCode="Delete"
-        defaultEdgeOptions={{ type: "smoothstep", animated: false }}
+        defaultEdgeOptions={{ type: "floating", animated: false }}
         panOnDrag
         nodesDraggable
-        selectionOnDrag={mode === "lasso"}
-        connectOnClick={mode === "connect"}
+        selectionOnDrag={false}
+        connectOnClick={false}
         fitView={nodes.length > 0}
         proOptions={{ hideAttribution: true }}
       >
@@ -803,199 +1268,170 @@ function CanvasBoardInner({ onOpenSettings, credentials = [] }: CanvasBoardProps
         <Background variant={BackgroundVariant.Dots} />
       </ReactFlow>
 
-      {/* Floating toolbar */}
-      {nodes.length > 0 ? (
-        <div className="absolute left-1/2 top-3 z-10 -translate-x-1/2 flex items-center gap-2 rounded-lg border border-[hsl(var(--border))] bg-white/95 px-3 py-2 shadow-lg backdrop-blur-sm">
-          <div className="flex gap-1">
-            {(["connect", "lasso"] as const).map((nextMode) => (
-              <button
-                key={nextMode}
-                type="button"
-                className={`rounded border px-2 py-1 text-xs ${mode === nextMode ? "bg-slate-200" : "bg-white"}`}
-                onClick={() => {
-                  if (mode === nextMode) { setMode("select") } else {
-                    setMode((current) => transitionMode(current, nextMode, {
-                      hasSelection: selection.nodeIds.length > 0, isPointerDown: false,
-                    }))
-                  }
-                }}
-              >
-                {nextMode}
-              </button>
-            ))}
-          </div>
-          <div className="mx-1 h-5 w-px bg-slate-200" />
-          <SemanticLevelSelector
-            mode={semanticState.mode}
-            level={semanticState.level}
-            resolvedLevel={displayLevel}
-            onModeChange={(m) => setSemanticStateValue((s) => setSemanticMode(s, m))}
-            onLevelChange={(l) => setSemanticStateValue((s) => setManualLevel(s, l))}
-          />
-          {onOpenSettings ? (
-            <>
-              <div className="mx-1 h-5 w-px bg-slate-200" />
-              <button
-                type="button"
-                className="rounded border bg-white px-2 py-1 text-xs hover:bg-slate-50"
-                onClick={onOpenSettings}
-                aria-label="Settings"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-              </button>
-            </>
-          ) : null}
-        </div>
-      ) : null}
-
-      {/* Generation notices */}
-      {generation.error ? (
-        <div className="absolute left-1/2 top-16 z-10 -translate-x-1/2 rounded-lg border border-red-200 bg-red-50/95 px-3 py-1 text-xs text-red-600 shadow-lg backdrop-blur-sm">
-          {generation.error}
-        </div>
-      ) : null}
-      {generation.failureNotice ? (
-        <div className="absolute left-1/2 top-16 z-10 -translate-x-1/2 rounded-lg border border-amber-300 bg-amber-50/95 px-3 py-1 text-xs text-amber-900 shadow-lg backdrop-blur-sm" role="status">
-          <p>{generation.failureNotice.category}: {generation.failureNotice.message}</p>
-          <p>Actions: {generation.failureNotice.actions.join(" / ")}</p>
-        </div>
-      ) : null}
-
       {/* Node detail panel */}
       {focusedNode ? (
         <aside
-          className="absolute right-3 top-3 z-20 w-80 max-h-[calc(100%-1.5rem)] overflow-y-auto rounded-lg border border-[hsl(var(--border))] bg-white/95 shadow-xl backdrop-blur-sm"
+          className="absolute top-3 z-20 w-[min(24rem,calc(100vw-1.5rem))] max-h-[calc(100%-1.5rem)] overflow-y-auto rounded-lg border border-border bg-background/95 shadow-xl backdrop-blur-xs animate-in fade-in-0 slide-in-from-right-2 duration-200"
           aria-label="Node detail panel"
+          style={{ right: `${nodePanelRightPx}px` }}
         >
           {/* Header */}
-          <div className="flex items-center gap-2 border-b border-[hsl(var(--border))] px-3 py-2">
+          <div className="flex items-center gap-2 border-b border-border px-3 py-2">
             <span className="text-sm">{getNodeVisualSpec(focusedNode.type).icon}</span>
             <span className="text-xs font-semibold">{getNodeVisualSpec(focusedNode.type).typeLabel}</span>
-            <button
+            <Button
               type="button"
-              className="ml-auto rounded p-0.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+              variant="ghost"
+              size="sm"
+              className="ml-auto h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
               onClick={() => setFocusedNodeId(null)}
               aria-label="Close panel"
             >
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
-            </button>
+            </Button>
           </div>
 
-          {/* Prompt (read-only) */}
-          {focusedNode.prompt ? (
-            <div className="border-b border-[hsl(var(--border))] px-3 py-2">
-              <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">Prompt</label>
-              <p className="text-xs text-slate-700">{focusedNode.prompt}</p>
-            </div>
-          ) : null}
-
-          {/* Full response */}
-          <div className="border-b border-[hsl(var(--border))] p-3">
-            <div className="mb-1 flex items-center justify-between">
-              <label className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Response</label>
-              <button
-                type="button"
-                className="text-[10px] text-sky-600 hover:underline"
-                onClick={() => {
-                  const el = document.getElementById("researchlm-response-editor")
-                  if (el) {
-                    el.classList.toggle("hidden")
-                    document.getElementById("researchlm-response-markdown")?.classList.toggle("hidden")
-                  }
-                }}
-              >
-                Toggle edit
-              </button>
-            </div>
-            <div id="researchlm-response-markdown" className="researchlm-markdown max-h-60 overflow-y-auto rounded border border-[hsl(var(--border))] bg-white p-2 text-sm">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{focusedNode.content || "_No response yet_"}</ReactMarkdown>
-            </div>
-            <textarea
-              id="researchlm-response-editor"
-              className="hidden h-40 w-full resize-y rounded border border-[hsl(var(--border))] bg-white p-2 text-sm outline-none focus:ring-1 focus:ring-sky-300"
-              value={focusedNode.content}
-              aria-label="Node content"
+          {/* Prompt */}
+          <div className="border-b border-border p-3">
+            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Prompt</label>
+            {focusedNodeContextBlocks.length > 0 ? (
+              <div className="mb-2 rounded-md border border-border/70 bg-muted/40 px-2 py-1.5" data-testid="node-panel-context-blocks">
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Context
+                </p>
+                <div className="max-h-28 space-y-1 overflow-y-auto">
+                  {focusedNodeContextBlocks.map((contextBlock, index) => (
+                    <blockquote
+                      key={`${focusedNode.id}:panel-context:${index}`}
+                      className="rounded-sm border-l-2 border-primary/40 pl-2 text-[11px] leading-relaxed text-muted-foreground whitespace-pre-wrap"
+                    >
+                      {contextBlock}
+                    </blockquote>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            <Textarea
+              className="h-24 resize-y text-xs font-medium text-foreground"
+              value={focusedNode.prompt ?? ""}
+              aria-label="Node prompt"
               onChange={(e) => {
                 const next = e.target.value
                 setNodes((current) => current.map((n) =>
-                  n.id === focusedNode.id ? { ...n, content: next, updatedAt: new Date().toISOString() } : n
+                  n.id === focusedNode.id ? { ...n, prompt: next, updatedAt: new Date().toISOString() } : n
                 ))
               }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey) {
+                  event.preventDefault()
+                  const nextPrompt = event.currentTarget.value.trim()
+                  if (!nextPrompt) {
+                    return
+                  }
+                  void handlePromptSubmit(focusedNode.id, nextPrompt)
+                }
+              }}
             />
+            <p className="mt-1 text-[10px] text-muted-foreground">Enter to regenerate, Shift+Enter for newline.</p>
+          </div>
+
+          {/* Response (read-only) */}
+          <div className="border-b border-border p-3">
+            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Response</label>
+            <div
+              className="researchlm-markdown max-h-60 overflow-y-auto rounded border border-border bg-card p-2 text-sm"
+              data-testid="node-response-markdown"
+              onContextMenu={(event) => handleResponseContextMenu(event, focusedNode.id)}
+            >
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{focusedNode.content || "_No response yet_"}</ReactMarkdown>
+            </div>
+            <p className="mt-1 text-[10px] text-muted-foreground">Select response text and right-click to follow up.</p>
           </div>
 
           {/* Expand actions */}
-          <div className="border-b border-[hsl(var(--border))] p-3">
-            <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">Explore</label>
+          <div className="border-b border-border p-3">
+            <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Explore</label>
             <div className="flex flex-wrap gap-1.5">
-              <button
+              <Button
                 type="button"
-                className="rounded border px-2 py-1 text-xs hover:bg-slate-50 disabled:opacity-50"
+                variant="outline"
+                size="sm"
+                className="h-7 px-2 text-xs"
                 disabled={generation.isStreaming || !focusedNode.content}
                 onClick={() => void handleBatchExpand("questions", focusedNode)}
               >
                 Questions
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className="rounded border px-2 py-1 text-xs hover:bg-slate-50 disabled:opacity-50"
+                variant="outline"
+                size="sm"
+                className="h-7 px-2 text-xs"
                 disabled={generation.isStreaming || !focusedNode.content}
                 onClick={() => void handleBatchExpand("subtopics", focusedNode)}
               >
                 Subtopics
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className="rounded border px-2 py-1 text-xs hover:bg-slate-50 disabled:opacity-50"
+                variant="outline"
+                size="sm"
+                className="h-7 px-2 text-xs"
                 disabled={generation.isStreaming || !focusedNode.content}
                 onClick={() => void handleSummarize(focusedNode.id)}
               >
                 Summarize
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className="rounded border px-2 py-1 text-xs hover:bg-slate-50 disabled:opacity-50"
+                variant="outline"
+                size="sm"
+                className="h-7 px-2 text-xs"
                 disabled={generation.isStreaming || !focusedNode.prompt}
                 onClick={() => void handleRegenerate(focusedNode.id)}
               >
                 Regenerate
-              </button>
+              </Button>
             </div>
           </div>
 
           {/* Color picker */}
-          <div className="border-b border-[hsl(var(--border))] p-3">
-            <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">Color</label>
+          <div className="border-b border-border p-3">
+            <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Color</label>
             <div className="flex flex-wrap gap-1.5">
               {COLOR_PRESETS.map((preset) => (
-                <button
-                  key={preset.label}
-                  type="button"
-                  className={`h-6 w-6 rounded-full border-2 ${focusedNode.colorToken === preset.value || (!focusedNode.colorToken && !preset.value) ? "border-sky-500" : "border-slate-200"}`}
-                  style={{ background: preset.value || "hsl(var(--node-topic-bg))" }}
-                  title={preset.label}
-                  onClick={() => {
-                    setNodes((current) => current.map((n) =>
-                      n.id === focusedNode.id ? { ...n, colorToken: preset.value || undefined, updatedAt: new Date().toISOString() } : n
-                    ))
-                  }}
-                />
+                <Tooltip key={preset.label}>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      aria-label={`Set ${preset.label} color`}
+                      className={`h-6 w-6 rounded-full border-2 ${focusedNode.colorToken === preset.value || (!focusedNode.colorToken && !preset.value) ? "border-primary" : "border-border"}`}
+                      style={{ background: preset.value || "var(--node-topic-bg)" }}
+                      onClick={() => {
+                        setNodes((current) => current.map((n) =>
+                          n.id === focusedNode.id ? { ...n, colorToken: preset.value || undefined, updatedAt: new Date().toISOString() } : n
+                        ))
+                      }}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent side="top">{preset.label}</TooltipContent>
+                </Tooltip>
               ))}
             </div>
           </div>
 
           {/* Model override */}
-          <div className="border-b border-[hsl(var(--border))] p-3">
-            <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">Model</label>
-            <select
-              className="w-full rounded border p-1 text-xs"
+          <div className="border-b border-border p-3">
+            <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Model</label>
+            <Select
               value={
                 focusedNode.providerOverride
                   ? `${focusedNode.providerOverride.provider}::${focusedNode.providerOverride.model}`
                   : "__workspace_default__"
               }
-              onChange={(e) => {
-                const modelValue = e.target.value
+              onValueChange={(modelValue) => {
                 setNodes((current) => current.map((n) =>
                   n.id === focusedNode.id
                     ? {
@@ -1016,31 +1452,39 @@ function CanvasBoardInner({ onOpenSettings, credentials = [] }: CanvasBoardProps
                 ))
               }}
             >
-              <option value="__workspace_default__">
-                Workspace default ({workspaceProvider}/{workspaceModel})
-              </option>
-              {catalogProviders.map((provider) => (
-                <optgroup key={provider.id} label={provider.name}>
-                  {provider.models.map((model) => (
-                    <option key={`${provider.id}:${model.id}`} value={`${provider.id}::${model.id}`}>
-                      {model.name}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__workspace_default__">
+                  Workspace default ({workspaceProvider}/{workspaceModel})
+                </SelectItem>
+                {catalogProviders.map((provider) => (
+                  <SelectGroup key={provider.id}>
+                    <SelectLabel>{provider.name}</SelectLabel>
+                    {provider.models.map((model) => (
+                      <SelectItem key={`${provider.id}:${model.id}`} value={`${provider.id}::${model.id}`}>
+                        {model.name}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Delete */}
           <div className="p-3">
-            <button
+            <Button
               type="button"
-              className="w-full rounded border border-red-200 px-2 py-1.5 text-xs text-red-600 hover:bg-red-50"
+              variant="destructive"
+              size="sm"
+              className="h-8 w-full text-xs"
               onClick={() => handleDeleteNode(focusedNode.id)}
             >
               Delete node
-            </button>
-            <div className="mt-2 text-[10px] text-slate-400">
+            </Button>
+            <div className="mt-2 text-[10px] text-muted-foreground">
               <p>ID: {focusedNode.id.slice(0, 8)}...</p>
               <p>Position: ({Math.round(focusedNode.position.x)}, {Math.round(focusedNode.position.y)})</p>
             </div>
@@ -1048,26 +1492,31 @@ function CanvasBoardInner({ onOpenSettings, credentials = [] }: CanvasBoardProps
         </aside>
       ) : null}
 
-      {/* Bottom-left panels */}
-      <div className="absolute bottom-3 left-3 z-10 flex items-end gap-2">
-        <div className="rounded-lg border border-[hsl(var(--border))] bg-white/95 px-3 py-2 shadow-lg backdrop-blur-sm">
-          <SemanticLegend
-            mode={semanticState.mode}
-            resolvedLevel={displayLevel}
-            zoom={zoom}
-            breakpoints={semanticState.breakpoints ?? DEFAULT_SEMANTIC_BREAKPOINTS}
-          />
+      {responseFollowUpMenu ? (
+        <div
+          className="fixed z-40 rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-lg animate-in fade-in-0 zoom-in-95 duration-150"
+          data-response-followup-menu="true"
+          style={{ left: `${responseFollowUpMenu.x}px`, top: `${responseFollowUpMenu.y}px` }}
+        >
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={handleFollowUpFromResponseSelection}
+              >
+                Follow up
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-xs text-xs">
+              {responseFollowUpMenu.selectedText}
+            </TooltipContent>
+          </Tooltip>
         </div>
-        <div className="rounded-lg border border-[hsl(var(--border))] bg-white/95 px-3 py-2 shadow-lg backdrop-blur-sm">
-          <HistoryPanel
-            entries={history}
-            canUndo={historyCursor >= 0}
-            canRedo={historyCursor < history.length - 1}
-            onUndo={() => setHistoryCursor((c) => Math.max(-1, c - 1))}
-            onRedo={() => setHistoryCursor((c) => Math.min(history.length - 1, c + 1))}
-          />
-        </div>
-      </div>
+      ) : null}
+
     </div>
   )
 }

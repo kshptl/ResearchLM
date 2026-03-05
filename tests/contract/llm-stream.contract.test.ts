@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 
 describe("/api/llm/stream contract", () => {
   it("accepts known provider values", () => {
-    const providers = ["openai", "anthropic", "google", "openrouter", "github-models", "github-copilot", "amazon-bedrock"]
+    const providers = ["openai", "anthropic", "google", "openrouter", "github", "amazon-bedrock"]
     expect(providers).toContain("openai")
     expect(providers).toContain("anthropic")
   })

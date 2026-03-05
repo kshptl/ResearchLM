@@ -7,10 +7,15 @@ export type ResearchlmNodeData = {
   semanticLevel: SemanticLevel
   semanticMode: "auto" | "manual"
   onAddChild?: (nodeId: string) => void
+  onRegenerate?: (nodeId: string) => void
+  onDeleteNode?: (nodeId: string) => void
+  onSetColor?: (nodeId: string, colorToken?: string) => void
+  onPromptEditStart?: (nodeId: string) => void
   onPromptSubmit?: (nodeId: string, prompt: string) => void
   onResize?: (nodeId: string, width: number, height: number, isFinal?: boolean) => void
   isStreaming?: boolean
   isEditing?: boolean
+  isFocused?: boolean
 }
 
 export function toRFNode(
@@ -20,10 +25,15 @@ export function toRFNode(
     semanticMode: "auto" | "manual"
     selected: boolean
     onAddChild?: (nodeId: string) => void
+    onRegenerate?: (nodeId: string) => void
+    onDeleteNode?: (nodeId: string) => void
+    onSetColor?: (nodeId: string, colorToken?: string) => void
+    onPromptEditStart?: (nodeId: string) => void
     onPromptSubmit?: (nodeId: string, prompt: string) => void
     onResize?: (nodeId: string, width: number, height: number, isFinal?: boolean) => void
     isStreaming?: boolean
     isEditing?: boolean
+    isFocused?: boolean
   }
 ): RFNode<ResearchlmNodeData> {
   return {
@@ -44,10 +54,15 @@ export function toRFNode(
       semanticLevel: options.semanticLevel,
       semanticMode: options.semanticMode,
       onAddChild: options.onAddChild,
+      onRegenerate: options.onRegenerate,
+      onDeleteNode: options.onDeleteNode,
+      onSetColor: options.onSetColor,
+      onPromptEditStart: options.onPromptEditStart,
       onPromptSubmit: options.onPromptSubmit,
       onResize: options.onResize,
       isStreaming: options.isStreaming,
       isEditing: options.isEditing,
+      isFocused: options.isFocused,
     },
   }
 }
@@ -57,7 +72,7 @@ export function toRFEdge(edge: Edge): RFEdge {
     id: edge.id,
     source: edge.fromNodeId,
     target: edge.toNodeId,
-    type: "smoothstep",
+    type: "floating",
     markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16 },
     style: { strokeWidth: 1.5 },
   }
@@ -70,10 +85,15 @@ export function toRFNodes(
     semanticMode: "auto" | "manual"
     selectedIds: string[]
     onAddChild?: (nodeId: string) => void
+    onRegenerate?: (nodeId: string) => void
+    onDeleteNode?: (nodeId: string) => void
+    onSetColor?: (nodeId: string, colorToken?: string) => void
+    onPromptEditStart?: (nodeId: string) => void
     onPromptSubmit?: (nodeId: string, prompt: string) => void
     onResize?: (nodeId: string, width: number, height: number, isFinal?: boolean) => void
     streamingNodeIds?: Set<string>
     editingNodeId?: string | null
+    focusedNodeId?: string | null
   }
 ): RFNode<ResearchlmNodeData>[] {
   return nodes.map((node) =>
@@ -82,10 +102,15 @@ export function toRFNodes(
       semanticMode: options.semanticMode,
       selected: options.selectedIds.includes(node.id),
       onAddChild: options.onAddChild,
+      onRegenerate: options.onRegenerate,
+      onDeleteNode: options.onDeleteNode,
+      onSetColor: options.onSetColor,
+      onPromptEditStart: options.onPromptEditStart,
       onPromptSubmit: options.onPromptSubmit,
       onResize: options.onResize,
       isStreaming: options.streamingNodeIds?.has(node.id),
       isEditing: options.editingNodeId === node.id,
+      isFocused: options.focusedNodeId === node.id,
     })
   )
 }

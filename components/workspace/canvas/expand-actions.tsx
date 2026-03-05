@@ -1,6 +1,7 @@
 "use client"
 
 import React from "react"
+import { Button } from "@/components/ui/button"
 import type { GenerationIntent } from "@/features/generation/types"
 
 type Props = {
@@ -19,15 +20,17 @@ export function ExpandActions({ disabled, onSelect }: Props) {
   return (
     <div className="flex flex-wrap gap-2">
       {actions.map((action) => (
-        <button
+        <Button
           key={action.intent}
           type="button"
           disabled={disabled}
           onClick={() => onSelect(action.intent)}
-          className="rounded-md border border-[hsl(var(--border))] px-3 py-1 text-xs font-medium disabled:opacity-50"
+          variant="outline"
+          size="sm"
+          className="h-7 px-3 text-xs"
         >
           {action.label}
-        </button>
+        </Button>
       ))}
     </div>
   )

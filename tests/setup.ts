@@ -8,3 +8,20 @@ if (typeof globalThis.ResizeObserver === "undefined") {
     disconnect() {}
   } as unknown as typeof globalThis.ResizeObserver
 }
+
+// Polyfill matchMedia for jsdom (required by Sonner)
+if (typeof globalThis.window !== "undefined" && typeof globalThis.window.matchMedia === "undefined") {
+  Object.defineProperty(globalThis.window, "matchMedia", {
+    writable: true,
+    value: (query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false
+    })
+  })
+}

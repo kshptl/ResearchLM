@@ -74,16 +74,25 @@ const anthropicMethods: ProviderAuthMethod[] = [
   genericApiMethod,
 ]
 
+const githubCopilotOauthMethod: ProviderAuthMethod = {
+  id: "github-copilot-oauth",
+  label: "Login with GitHub Copilot",
+  type: "oauth",
+  description: "Authorize with GitHub device flow.",
+  oauthFlow: {
+    startAction: "copilot-start",
+    pollAction: "copilot-poll",
+  },
+}
+
+const githubMethods: ProviderAuthMethod[] = [
+  genericApiMethod,
+  githubCopilotOauthMethod,
+]
+
 const githubCopilotMethods: ProviderAuthMethod[] = [
   {
-    id: "github-copilot-oauth",
-    label: "Login with GitHub Copilot",
-    type: "oauth",
-    description: "Authorize with GitHub device flow.",
-    oauthFlow: {
-      startAction: "copilot-start",
-      pollAction: "copilot-poll",
-    },
+    ...githubCopilotOauthMethod,
   },
 ]
 
@@ -115,7 +124,9 @@ const bedrockMethods: ProviderAuthMethod[] = [
 const exactMethodMap: Record<string, ProviderAuthMethod[]> = {
   openai: openAiMethods,
   anthropic: anthropicMethods,
+  github: githubMethods,
   "github-copilot": githubCopilotMethods,
+  "github-models": githubMethods,
   bedrock: bedrockMethods,
   "amazon-bedrock": bedrockMethods,
 }

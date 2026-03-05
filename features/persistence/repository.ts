@@ -3,6 +3,7 @@ import type { GenerationAttempt, LocalGenerationLog } from "@/features/generatio
 import type { HierarchyLink } from "@/features/graph-model/types"
 import type { RetryContextSnapshot } from "@/features/generation/retry-context"
 import type { GeneratedSubtopicCandidate } from "@/features/hierarchy-model/state"
+import type { ChatSessionRecord } from "@/lib/idb/database"
 
 type GenerationRequestRecord = {
   id: string
@@ -41,6 +42,11 @@ export type ConflictEventRecord = {
   resolution: "local" | "remote"
   summary: string
   createdAt: string
+}
+
+export type SettingRecord<T = unknown> = {
+  id: string
+  value: T
 }
 
 const memoryFallback = new Map<string, Map<string, unknown>>()
@@ -180,5 +186,25 @@ export const persistenceRepository = {
     return all
       .filter((event) => event.workspaceId === workspaceId)
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+  },
+  async saveChatSession(record: ChatSessionRecord): Promise<void> {
+    await putRecord("chatSessions", record)
+  },
+  async getChatSession(chatSessionId: string): Promise<ChatSessionRecord | undefined> {
+    return await getRecord<ChatSessionRecord>("chatSessions", chatSessionId)
+  },
+  async listChatSessions(): Promise<ChatSessionRecord[]> {
+    const all = await getAllRecords<ChatSessionRecord>("chatSessions")
+    return all.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+  },
+  async deleteChatSession(chatSessionId: string): Promise<void> {
+    await deleteRecord("chatSessions", chatSessionId)
+  },
+  async saveSetting<T = unknown>(id: string, value: T): Promise<void> {
+    await putRecord<SettingRecord<T>>("settings", { id, value })
+  },
+  async getSetting<T = unknown>(id: string): Promise<T | undefined> {
+    const record = await getRecord<SettingRecord<T>>("settings", id)
+    return record?.value
   }
 }

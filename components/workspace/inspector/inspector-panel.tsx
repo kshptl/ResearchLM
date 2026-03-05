@@ -1,6 +1,9 @@
 "use client"
 
 import React, { useEffect, useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Textarea } from "@/components/ui/textarea"
 import type { SemanticLevel } from "@/features/graph-model/types"
 
 type Props = {
@@ -32,24 +35,25 @@ export function InspectorPanel({
 
   if (!nodeId) {
     return (
-      <aside className="rounded-md border border-[hsl(var(--border))] p-3 text-xs text-slate-600">
-        Select a node to inspect and edit details.
-      </aside>
+      <Card className="border-border">
+        <CardContent className="p-3 text-xs text-slate-600">Select a node to inspect and edit details.</CardContent>
+      </Card>
     )
   }
 
   return (
-    <aside className="space-y-2 rounded-md border border-[hsl(var(--border))] p-3">
+    <Card className="border-border">
+      <CardContent className="space-y-2 p-3">
       <p className="text-xs font-semibold">Inspector</p>
       <p className="text-xs text-slate-600">Node: {nodeId}</p>
-      <textarea
+      <Textarea
         value={draft}
         onChange={(event) => {
           const next = event.target.value
           setDraft(next)
           onChange(next)
         }}
-        className="h-24 w-full resize-none rounded border p-2 text-xs"
+        className="h-24 resize-none text-xs"
       />
       {semanticMode && semanticLevel ? (
         <section className="space-y-2 rounded border border-slate-200 p-2">
@@ -60,38 +64,45 @@ export function InspectorPanel({
           </p>
           {onSemanticModeChange ? (
             <div className="flex gap-2">
-              <button
+              <Button
                 type="button"
-                className={`rounded border px-2 py-1 text-xs ${semanticMode === "auto" ? "bg-slate-200" : "bg-white"}`}
+                variant={semanticMode === "auto" ? "secondary" : "outline"}
+                size="sm"
+                className="h-7 px-2 text-xs"
                 onClick={() => onSemanticModeChange("auto")}
               >
                 Auto
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className={`rounded border px-2 py-1 text-xs ${semanticMode === "manual" ? "bg-slate-200" : "bg-white"}`}
+                variant={semanticMode === "manual" ? "secondary" : "outline"}
+                size="sm"
+                className="h-7 px-2 text-xs"
                 onClick={() => onSemanticModeChange("manual")}
               >
                 Manual
-              </button>
+              </Button>
             </div>
           ) : null}
           {semanticMode === "manual" && onSemanticLevelChange ? (
             <div className="flex flex-wrap gap-2">
               {semanticLevels.map((level) => (
-                <button
+                <Button
                   key={level}
                   type="button"
-                  className={`rounded border px-2 py-1 text-xs ${level === semanticLevel ? "bg-sky-100" : "bg-white"}`}
+                  variant={level === semanticLevel ? "secondary" : "outline"}
+                  size="sm"
+                  className="h-7 px-2 text-xs"
                   onClick={() => onSemanticLevelChange(level)}
                 >
                   {level}
-                </button>
+                </Button>
               ))}
             </div>
           ) : null}
         </section>
       ) : null}
-    </aside>
+      </CardContent>
+    </Card>
   )
 }

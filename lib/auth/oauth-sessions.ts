@@ -16,7 +16,7 @@ type OpenAiHeadlessSession = {
 }
 
 type CopilotSession = {
-  providerId: "github-copilot"
+  providerId: "github"
   domain: string
   deviceCode: string
   intervalSeconds: number

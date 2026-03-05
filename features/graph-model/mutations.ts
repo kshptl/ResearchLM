@@ -2,6 +2,8 @@ import type { Edge, GraphNode, NodeGroup, NodeType } from "@/features/graph-mode
 
 const MAX_TEXT_EXTRACTION_LEN = 5000
 const MIN_TEXT_EXTRACTION_LEN = 3
+const DEFAULT_CONVERSATION_NODE_WIDTH = 300
+const DEFAULT_CONVERSATION_NODE_HEIGHT = 220
 
 const allowedTypes: NodeType[] = ["topic", "generated", "question", "summary", "keyword", "portal"]
 
@@ -36,6 +38,7 @@ export function createConversationNode(params: {
   workspaceId: string
   canvasId: string
   prompt: string
+  promptContextBlocks?: string[]
   content: string
   x: number
   y: number
@@ -49,8 +52,10 @@ export function createConversationNode(params: {
     canvasId: params.canvasId,
     type: "topic",
     prompt: params.prompt,
+    promptContextBlocks: params.promptContextBlocks,
     content: params.content,
     position: { x: params.x, y: params.y },
+    dimensions: { width: DEFAULT_CONVERSATION_NODE_WIDTH, height: DEFAULT_CONVERSATION_NODE_HEIGHT },
     sourceNodeId: params.sourceNodeId,
     providerOverride: params.providerOverride,
     createdAt: now,

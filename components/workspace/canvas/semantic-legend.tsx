@@ -13,7 +13,7 @@ type Props = {
 
 export function SemanticLegend({ mode, resolvedLevel, zoom, breakpoints }: Props) {
   return (
-    <section className="rounded-md border border-[hsl(var(--border))] bg-slate-50 p-2 text-xs text-slate-700">
+    <section className="rounded-md border border-border bg-slate-50 p-2 text-xs text-slate-700">
       <p className="font-semibold">Semantic detail</p>
       <p>
         Mode: <span className="font-medium">{mode}</span> · active level: <span className="font-medium">{resolvedLevel}</span>

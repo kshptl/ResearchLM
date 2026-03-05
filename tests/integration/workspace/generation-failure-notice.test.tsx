@@ -1,24 +1,43 @@
 import "@/tests/helpers/mock-react-flow"
 import React from "react"
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import WorkspacePage from "@/app/(workspace)/page"
+import { Toaster } from "@/components/ui/sonner"
+import { TooltipProvider } from "@/components/ui/tooltip"
+import { clearCredentialsForTests, saveCredential } from "@/lib/auth/credential-store"
 
 describe("generation failure notice", () => {
-  it("renders non-blocking failure notice fields and actions", async () => {
+  beforeEach(() => {
+    clearCredentialsForTests()
+    saveCredential("openai", "api-key", "sk-test")
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    clearCredentialsForTests()
+  })
+
+  it("does not emit quality failure notices for empty model output", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      body: {
+        getReader: () => ({
+          read: vi.fn().mockResolvedValue({ done: true, value: undefined })
+        })
+      }
+    })
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        body: {
-          getReader: () => ({
-            read: vi.fn().mockResolvedValue({ done: true, value: undefined })
-          })
-        }
-      })
+      fetchMock
     )
 
-    render(<WorkspacePage />)
+    render(
+      <TooltipProvider>
+        <WorkspacePage />
+        <Toaster />
+      </TooltipProvider>
+    )
 
     // Submit via CentralPromptBar to trigger generation
     const input = screen.getByPlaceholderText("Type a topic or question...")
@@ -26,9 +45,13 @@ describe("generation failure notice", () => {
     fireEvent.submit(input.closest("form")!)
 
     await waitFor(() => {
-      expect(screen.getByRole("status")).toHaveTextContent(/quality:/i)
-      expect(screen.getByRole("status")).toHaveTextContent(/Generation returned no usable content/i)
-      expect(screen.getByRole("status")).toHaveTextContent(/Actions: retry \/ change-action \/ dismiss/i)
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/llm/stream",
+        expect.objectContaining({ method: "POST" })
+      )
     })
+
+    expect(screen.queryByText(/Generation returned no usable content/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/quality:/i)).not.toBeInTheDocument()
   })
 })

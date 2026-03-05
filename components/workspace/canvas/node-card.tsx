@@ -2,6 +2,8 @@
 
 import React from "react"
 import { useEffect, useState } from "react"
+import { Badge } from "@/components/ui/badge"
+import { Textarea } from "@/components/ui/textarea"
 import type { NodeType, SemanticLevel } from "@/features/graph-model/types"
 import { getNodeVisualSpec } from "@/features/graph-model/node-visual-contract"
 import { representationForLevel } from "@/features/semantic-levels/representation"
@@ -29,18 +31,18 @@ export function NodeCard({ id, type, content, semanticLevel = "all", semanticMod
 
   return (
     <article
-      className={`w-72 rounded-md border p-3 shadow-sm ${visual.tokenClass} ${selected ? "ring-2 ring-sky-500" : ""}`}
+      className={`w-72 rounded-md border p-3 shadow-xs ${visual.tokenClass} ${selected ? "ring-2 ring-sky-500" : ""}`}
       onClick={() => onSelect?.(id)}
     >
       <header className="mb-2 flex items-center gap-2 text-xs font-semibold">
         <span aria-hidden="true">{visual.icon}</span>
         <span>{visual.typeLabel}</span>
-        <span className="ml-auto rounded bg-slate-100 px-1.5 py-0.5 text-[10px] uppercase text-slate-600">
+        <Badge variant="secondary" className="ml-auto text-[10px] uppercase text-slate-600">
           {semanticMode}:{semanticLevel}
-        </span>
+        </Badge>
       </header>
-      <textarea
-        className="h-24 w-full resize-none border-none bg-transparent text-sm outline-none"
+      <Textarea
+        className="h-24 resize-none border-none bg-transparent px-0 py-0 text-sm shadow-none focus-visible:ring-0"
         value={isEditable ? value : projected}
         readOnly={!isEditable}
         aria-label="Node content"

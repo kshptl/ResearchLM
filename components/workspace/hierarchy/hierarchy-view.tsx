@@ -1,6 +1,8 @@
 "use client"
 
 import React from "react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { Canvas, HierarchyLink } from "@/features/graph-model/types"
 
 type Props = {
@@ -12,14 +14,19 @@ type Props = {
 
 export function HierarchyView({ canvases, links, activeCanvasId, onSelectCanvas }: Props) {
   return (
-    <aside className="space-y-2 rounded-md border border-[hsl(var(--border))] bg-white p-3">
-      <p className="text-xs font-semibold uppercase tracking-wide">Hierarchy</p>
-      <p className="text-xs text-slate-600">Links: {links.length}</p>
+    <Card className="border-border">
+      <CardHeader className="space-y-1 p-3">
+        <CardTitle className="text-xs uppercase tracking-wide">Hierarchy</CardTitle>
+        <p className="text-xs text-slate-600">Links: {links.length}</p>
+      </CardHeader>
+      <CardContent className="p-3 pt-0">
       <ul className="space-y-1">
         {canvases.map((canvas) => (
           <li key={canvas.id}>
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
               onClick={() => onSelectCanvas(canvas.id)}
               aria-current={activeCanvasId === canvas.id ? "page" : undefined}
               className={`w-full rounded px-2 py-1 text-left text-xs ${
@@ -28,10 +35,11 @@ export function HierarchyView({ canvases, links, activeCanvasId, onSelectCanvas 
             >
               <span className="font-medium">{canvas.topic}</span>
               <span className="ml-2 text-[10px] text-slate-600">depth {canvas.depth}</span>
-            </button>
+            </Button>
           </li>
         ))}
       </ul>
-    </aside>
+      </CardContent>
+    </Card>
   )
 }

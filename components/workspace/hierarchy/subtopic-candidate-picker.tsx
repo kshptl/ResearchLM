@@ -1,6 +1,9 @@
 "use client"
 
 import React from "react"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { GeneratedSubtopicCandidate } from "@/features/hierarchy-model/state"
 
 type Props = {
@@ -24,38 +27,46 @@ function badgeForLifecycle(lifecycle: GeneratedSubtopicCandidate["lifecycle"]): 
 
 export function SubtopicCandidatePicker({ candidates, onSelect, onDismiss }: Props) {
   return (
-    <section className="space-y-2 rounded-md border border-[hsl(var(--border))] bg-white p-3">
-      <h3 className="text-xs font-semibold uppercase tracking-wide">Generated subtopics</h3>
+    <Card className="border-border">
+      <CardHeader className="p-3">
+        <CardTitle className="text-xs uppercase tracking-wide">Generated subtopics</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2 p-3 pt-0">
       <ul className="space-y-2">
         {candidates.map((candidate) => (
           <li key={candidate.id} className="rounded border border-slate-200 p-2">
             <div className="flex items-center justify-between gap-2">
               <p className="text-sm text-slate-900">{candidate.label}</p>
-              <span className={`rounded px-2 py-0.5 text-[10px] font-semibold uppercase ${badgeForLifecycle(candidate.lifecycle)}`}>
+              <Badge className={`text-[10px] uppercase ${badgeForLifecycle(candidate.lifecycle)}`}>
                 {candidate.lifecycle}
-              </span>
+              </Badge>
             </div>
             <div className="mt-2 flex gap-2">
-              <button
+              <Button
                 type="button"
-                className="rounded border px-2 py-1 text-xs"
+                variant="outline"
+                size="sm"
+                className="h-7 px-2 text-xs"
                 onClick={() => onSelect(candidate.id)}
                 disabled={candidate.lifecycle === "selected"}
               >
                 Select
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className="rounded border px-2 py-1 text-xs"
+                variant="outline"
+                size="sm"
+                className="h-7 px-2 text-xs"
                 onClick={() => onDismiss(candidate.id)}
                 disabled={candidate.lifecycle === "dismissed"}
               >
                 Dismiss
-              </button>
+              </Button>
             </div>
           </li>
         ))}
       </ul>
-    </section>
+      </CardContent>
+    </Card>
   )
 }

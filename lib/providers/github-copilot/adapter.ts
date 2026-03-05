@@ -4,28 +4,66 @@ import { extractApiKeyFromAuth } from "@/lib/providers/auth"
 import { parseSseDataLines } from "@/lib/providers/sse-parser"
 import { joinProviderUrl } from "@/lib/providers/url"
 
-async function* streamGitHubCopilot(request: GenerationRequest): AsyncGenerator<NormalizedStreamEvent, void, void> {
-  const requestId = crypto.randomUUID()
-  yield { type: "start", data: { requestId, provider: "github-copilot", model: request.model, intent: request.intent } }
+function normalizeDomain(value: string): string {
+  return value.replace(/^https?:\/\//, "").replace(/\/+$/, "")
+}
 
-  const token = request.auth.type === "oauth" ? request.auth.refresh || request.auth.access : extractApiKeyFromAuth(request)
+function resolveCopilotBaseUrl(request: GenerationRequest): string {
+  if (request.auth.type === "oauth" && typeof request.auth.enterpriseUrl === "string" && request.auth.enterpriseUrl.length > 0) {
+    return `https://copilot-api.${normalizeDomain(request.auth.enterpriseUrl)}`
+  }
+  if (request.providerConfig?.apiBaseUrl?.includes("githubcopilot")) {
+    return request.providerConfig.apiBaseUrl
+  }
+  return "https://api.githubcopilot.com"
+}
+
+function resolveGitHubModelsBaseUrl(request: GenerationRequest): string {
+  if (request.providerConfig?.apiBaseUrl && !request.providerConfig.apiBaseUrl.includes("githubcopilot")) {
+    return request.providerConfig.apiBaseUrl
+  }
+  return "https://models.inference.ai.azure.com"
+}
+
+function resolveCopilotInitiator(request: GenerationRequest): "user" | "agent" {
+  const lastMessage = [...request.messages].reverse().find((message) => message.role !== "system")
+  return lastMessage?.role === "user" ? "user" : "agent"
+}
+
+async function* streamGitHub(request: GenerationRequest): AsyncGenerator<NormalizedStreamEvent, void, void> {
+  const requestId = crypto.randomUUID()
+  yield { type: "start", data: { requestId, provider: request.provider, model: request.model, intent: request.intent } }
+
+  const usingCopilotOauth = request.auth.type === "oauth"
+  const token =
+    request.auth.type === "oauth"
+      ? request.auth.refresh || request.auth.access
+      : extractApiKeyFromAuth(request)
   if (!token) {
-    yield { type: "error", data: { message: "Missing GitHub Copilot credential" } }
+    yield { type: "error", data: { message: "Missing GitHub credential" } }
     yield { type: "done", data: { finishReason: "error" } }
     return
   }
 
-  const baseUrl = request.providerConfig?.apiBaseUrl ?? "https://api.githubcopilot.com"
+  const baseUrl = usingCopilotOauth ? resolveCopilotBaseUrl(request) : resolveGitHubModelsBaseUrl(request)
   const endpoint = joinProviderUrl(baseUrl, "chat/completions")
+  const initiator = resolveCopilotInitiator(request)
+
+  const headers = new Headers({
+    "Content-Type": "application/json",
+    Accept: "application/json",
+    Authorization: `Bearer ${token}`,
+  })
+
+  if (usingCopilotOauth) {
+    headers.set("Openai-Intent", "conversation-edits")
+    headers.set("x-initiator", initiator)
+    headers.set("User-Agent", "researchlm/0.1.0")
+  }
+
   const response = await fetch(endpoint, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      "Openai-Intent": "conversation-edits",
-      "x-initiator": "user",
-      "User-Agent": "researchlm/0.1.0",
-    },
+    headers,
     body: JSON.stringify({
       model: request.model,
       stream: true,
@@ -65,11 +103,11 @@ async function* streamGitHubCopilot(request: GenerationRequest): AsyncGenerator<
 }
 
 export const githubCopilotAdapter: ProviderAdapter = {
-  name: "github-copilot",
+  name: "github",
   capabilities: {
     supportsTools: true,
     supportsJsonMode: true,
     supportsVision: true,
   },
-  stream: streamGitHubCopilot,
+  stream: streamGitHub,
 }

@@ -1,6 +1,8 @@
 "use client"
 
 import React from "react"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import type { SemanticLevel } from "@/features/graph-model/types"
 
 type Props = {
@@ -18,38 +20,44 @@ export function SemanticLevelSelector({ mode, level, resolvedLevel, onModeChange
 
   return (
     <div className="flex flex-wrap items-center gap-2" aria-label="Semantic detail controls">
-      <button
+      <Button
         type="button"
-        className={`rounded border px-2 py-1 text-xs ${mode === "auto" ? "bg-slate-200" : "bg-white"}`}
+        variant={mode === "auto" ? "secondary" : "outline"}
+        size="sm"
+        className="h-7 px-2 text-xs"
         aria-pressed={mode === "auto"}
         onClick={() => onModeChange("auto")}
       >
         Auto
-      </button>
-      <button
+      </Button>
+      <Button
         type="button"
-        className={`rounded border px-2 py-1 text-xs ${mode === "manual" ? "bg-slate-200" : "bg-white"}`}
+        variant={mode === "manual" ? "secondary" : "outline"}
+        size="sm"
+        className="h-7 px-2 text-xs"
         aria-pressed={mode === "manual"}
         onClick={() => onModeChange("manual")}
       >
         Manual
-      </button>
+      </Button>
       {mode === "manual"
         ? levels.map((semanticLevel) => (
-            <button
+            <Button
               key={semanticLevel}
               type="button"
               aria-pressed={semanticLevel === level}
-              className={`rounded border px-2 py-1 text-xs ${semanticLevel === level ? "bg-sky-100" : "bg-white"}`}
+              variant={semanticLevel === level ? "secondary" : "outline"}
+              size="sm"
+              className="h-7 px-2 text-xs"
               onClick={() => onLevelChange(semanticLevel)}
             >
               {semanticLevel}
-            </button>
+            </Button>
           ))
         : null}
-      <span className="rounded bg-slate-100 px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-slate-600">
+      <Badge variant="secondary" className="px-2 py-1 text-[10px] uppercase tracking-wide text-slate-600">
         showing {activeLevel}
-      </span>
+      </Badge>
     </div>
   )
 }

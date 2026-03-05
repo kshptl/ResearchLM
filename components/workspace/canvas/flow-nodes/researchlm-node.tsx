@@ -1,123 +1,350 @@
 "use client"
 
-import React, { useState, useRef } from "react"
+import React, { useCallback, useEffect, useRef, useState } from "react"
 import { Handle, Position, NodeResizer } from "@xyflow/react"
 import type { NodeProps } from "@xyflow/react"
+import { Palette, Plus, RefreshCw, Trash2 } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Spinner } from "@/components/ui/spinner"
+import { Textarea } from "@/components/ui/textarea"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { createNodeThemeStyle } from "@/features/graph-model/node-color-theme"
 import type { ResearchlmNodeData } from "@/features/graph-model/react-flow-adapters"
+import { cn } from "@/lib/utils"
+
+const NODE_COLOR_PRESETS = [
+  { label: "Default", value: "" },
+  { label: "Blue", value: "hsl(210, 90%, 92%)" },
+  { label: "Green", value: "hsl(145, 70%, 90%)" },
+  { label: "Yellow", value: "hsl(48, 95%, 88%)" },
+  { label: "Purple", value: "hsl(270, 70%, 92%)" },
+  { label: "Pink", value: "hsl(340, 80%, 92%)" },
+  { label: "Orange", value: "hsl(25, 90%, 90%)" },
+]
+
+type FooterActionButtonProps = React.ComponentProps<typeof Button> & {
+  icon: React.ReactNode
+  label: string
+}
+
+const FooterActionButton = React.forwardRef<HTMLButtonElement, FooterActionButtonProps>(
+  ({ icon, label, className, ["aria-label"]: ariaLabel, ...props }, ref) => (
+    <Button
+      ref={ref}
+      {...props}
+      aria-label={ariaLabel ?? label}
+      className={cn("nodrag h-7 w-7 p-0", className)}
+    >
+      {icon}
+    </Button>
+  ),
+)
+FooterActionButton.displayName = "FooterActionButton"
 
 export function ResearchlmNode({ data, selected, id }: NodeProps) {
-  const { graphNode, isStreaming, isEditing, onAddChild, onPromptSubmit, onResize } = data as ResearchlmNodeData
-  const [hovered, setHovered] = useState(false)
+  const {
+    graphNode,
+    isStreaming,
+    isEditing,
+    isFocused,
+    onAddChild,
+    onRegenerate,
+    onDeleteNode,
+    onSetColor,
+    onPromptEditStart,
+    onPromptSubmit,
+    onResize,
+  } = data as ResearchlmNodeData
   const [inputValue, setInputValue] = useState("")
-  const throttleRef = useRef<number | null>(null)
+  const [colorPickerOpen, setColorPickerOpen] = useState(false)
+  const resizeRafRef = useRef<number | null>(null)
+  const pendingResizeRef = useRef<{ width: number; height: number } | null>(null)
+  const promptContextBlocks = (graphNode.promptContextBlocks ?? [])
+    .map((block) => block.trim())
+    .filter((block) => block.length > 0)
+  const nodeThemeStyle = graphNode.colorToken ? createNodeThemeStyle(graphNode.colorToken) : undefined
+  const defaultNodeStyle = graphNode.colorToken
+    ? undefined
+    : ({
+        background: "var(--node-topic-bg)",
+        color: "var(--node-topic-fg)",
+      } as React.CSSProperties)
 
-  const bgColor = graphNode.colorToken ?? "hsl(var(--node-topic-bg))"
-  const fgColor = graphNode.colorToken ? undefined : "hsl(var(--node-topic-fg))"
+  useEffect(() => {
+    if (isEditing) {
+      setInputValue(graphNode.prompt ?? "")
+    }
+  }, [graphNode.prompt, isEditing])
+
+  const submitPrompt = useCallback(() => {
+    const nextPrompt = inputValue.trim()
+    if (!nextPrompt) {
+      return
+    }
+    onPromptSubmit?.(id, nextPrompt)
+    setInputValue("")
+  }, [id, inputValue, onPromptSubmit])
+
+  const flushResizeFrame = useCallback(() => {
+    resizeRafRef.current = null
+    const pending = pendingResizeRef.current
+    if (!pending) {
+      return
+    }
+    pendingResizeRef.current = null
+    onResize?.(id, pending.width, pending.height, false)
+  }, [id, onResize])
+
+  useEffect(() => {
+    return () => {
+      if (resizeRafRef.current !== null) {
+        window.cancelAnimationFrame(resizeRafRef.current)
+      }
+    }
+  }, [])
+
+  const contextBlocksMarkup = promptContextBlocks.length > 0 ? (
+    <div
+      className="mb-2 rounded-md border border-border/70 bg-muted/40 px-2 py-1.5"
+      data-testid={isEditing ? "node-inline-context-blocks" : "node-view-context-blocks"}
+    >
+      <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        Context
+      </p>
+      <div className="max-h-20 space-y-1 overflow-y-auto">
+        {promptContextBlocks.map((contextBlock, index) => (
+          <blockquote
+            key={`${id}:context:${index}`}
+            className="rounded-sm border-l-2 border-primary/40 pl-2 text-[11px] leading-relaxed text-muted-foreground whitespace-pre-wrap"
+          >
+            {contextBlock}
+          </blockquote>
+        ))}
+      </div>
+    </div>
+  ) : null
 
   return (
-    <div
-      className="relative h-full w-full"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
+    <div className="relative h-full w-full" data-node-editor-id={id} style={nodeThemeStyle}>
       {/* Only show resize handles when selected AND not streaming */}
       <NodeResizer
-        minWidth={200}
-        minHeight={80}
+        minWidth={260}
+        minHeight={140}
         isVisible={!!selected && !isStreaming}
-        lineClassName="!border-slate-300"
-        handleClassName="!bg-slate-400 !w-2.5 !h-2.5"
+        lineClassName="border-transparent!"
+        handleClassName="researchlm-node-resize-handle h-3! w-3! rounded-full! border! border-border! bg-background! shadow-xs!"
         onResize={(_event, params) => {
-          // Throttle intermediate updates to every 50ms for smooth but performant resizing
-          if (throttleRef.current) return
-          throttleRef.current = window.setTimeout(() => {
-            throttleRef.current = null
-          }, 50)
-          onResize?.(id, params.width, params.height, false)
+          pendingResizeRef.current = { width: params.width, height: params.height }
+          if (resizeRafRef.current !== null) {
+            return
+          }
+          resizeRafRef.current = window.requestAnimationFrame(flushResizeFrame)
         }}
         onResizeEnd={(_event, params) => {
-          // Clear throttle and send final update
-          if (throttleRef.current) {
-            clearTimeout(throttleRef.current)
-            throttleRef.current = null
+          if (resizeRafRef.current !== null) {
+            window.cancelAnimationFrame(resizeRafRef.current)
+            resizeRafRef.current = null
           }
+          pendingResizeRef.current = null
           onResize?.(id, params.width, params.height, true)
         }}
       />
-      <Handle type="target" position={Position.Top} className="!left-1/2 !bg-slate-300" />
+      <Handle type="target" position={Position.Top} className="left-1/2! h-4! w-4! bg-border!" />
 
-      <article
-        className={`min-h-[80px] min-w-[200px] h-full w-full overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-xl transition-all hover:shadow-2xl ${selected ? "ring-2 ring-slate-400" : ""}`}
-        style={graphNode.colorToken ? { background: bgColor, color: fgColor } : {}}
+      <Card
+        role="article"
+        className={`group flex h-full w-full min-h-[180px] min-w-[280px] flex-col gap-0 overflow-hidden rounded-2xl border border-border bg-card py-0 shadow-xl transition-all duration-200 hover:-translate-y-[1px] hover:shadow-2xl animate-in fade-in-0 zoom-in-[0.99] ${selected ? "ring-2 ring-ring" : ""}`}
+        style={defaultNodeStyle}
+        onWheelCapture={(event) => {
+          if (isFocused) {
+            event.stopPropagation()
+          }
+        }}
       >
-        {/* Editing mode: show input for new prompt */}
-        {isEditing ? (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault()
-              if (inputValue.trim()) {
-                onPromptSubmit?.(id, inputValue.trim())
-                setInputValue("")
-              }
-            }}
-          >
-            <input
-              autoFocus
-              className="nodrag w-full border-b border-sky-300 bg-transparent pb-1 text-sm outline-none placeholder:text-slate-400"
-              placeholder="Ask a follow-up question..."
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-            />
-          </form>
-        ) : (
-          <>
-            {/* Prompt */}
-            {graphNode.prompt ? (
-              <div className="mb-2 border-b border-slate-200 pb-2 text-xs font-medium text-slate-500">
-                {graphNode.prompt}
-              </div>
-            ) : null}
+        <CardHeader className="shrink-0 gap-1 p-2.5 [border-bottom:1px_solid_var(--border)]">
+          {isEditing ? (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                submitPrompt()
+              }}
+            >
+              {contextBlocksMarkup}
+              <Textarea
+                autoFocus
+                className="nodrag min-h-0 w-full resize-none border-x-0 border-t-0 border-b-primary/40 bg-transparent px-2 pb-1 text-xs font-medium text-foreground shadow-none placeholder:text-muted-foreground focus-visible:ring-0"
+                rows={3}
+                aria-label="Node prompt editor"
+                placeholder="Ask or edit prompt..."
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault()
+                    submitPrompt()
+                  }
+                }}
+              />
+            </form>
+          ) : (
+            <>
+              {contextBlocksMarkup}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="nodrag h-auto w-full cursor-text justify-start rounded px-0 py-0 text-left text-xs font-semibold text-foreground hover:bg-transparent"
+                    onClick={(event) => event.stopPropagation()}
+                    onDoubleClick={(event) => {
+                      event.stopPropagation()
+                      onPromptEditStart?.(id)
+                    }}
+                  >
+                    <span className="whitespace-pre-wrap">
+                      {graphNode.prompt && graphNode.prompt.trim().length > 0
+                        ? graphNode.prompt
+                        : "Double-click to add prompt..."}
+                    </span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">Double-click to edit prompt</TooltipContent>
+              </Tooltip>
+            </>
+          )}
+        </CardHeader>
 
-            {/* Response content - rendered as markdown */}
-            {graphNode.content ? (
-              <div className="researchlm-markdown text-[11px] leading-relaxed text-slate-700">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{graphNode.content}</ReactMarkdown>
-              </div>
-            ) : isStreaming ? (
-              <p className="animate-pulse text-sm text-slate-400">Generating...</p>
-            ) : (
-              <p className="text-sm italic text-slate-300">Empty node</p>
-            )}
+        <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden px-2.5 py-2">
+          {graphNode.content ? (
+            <div className="researchlm-markdown min-h-0 flex-1 overflow-y-auto pr-1 text-[11px] leading-relaxed text-foreground">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{graphNode.content}</ReactMarkdown>
+            </div>
+          ) : isStreaming ? (
+            <p className="animate-pulse text-sm text-muted-foreground">Generating...</p>
+          ) : (
+            <p className="text-sm italic text-muted-foreground/70">Empty node</p>
+          )}
 
-            {/* Streaming indicator */}
-            {isStreaming && graphNode.content ? (
-              <div className="mt-1 flex gap-0.5">
-                <span className="h-1 w-1 animate-bounce rounded-full bg-sky-500" style={{ animationDelay: "0ms" }} />
-                <span className="h-1 w-1 animate-bounce rounded-full bg-sky-500" style={{ animationDelay: "150ms" }} />
-                <span className="h-1 w-1 animate-bounce rounded-full bg-sky-500" style={{ animationDelay: "300ms" }} />
-              </div>
-            ) : null}
-          </>
-        )}
-      </article>
+        </CardContent>
 
-      <Handle type="source" position={Position.Bottom} className="!left-1/2 !bg-slate-300" />
+        <CardFooter className="shrink-0 p-1.5 [border-top:1px_solid_var(--border)]">
+          <div className="flex w-full flex-wrap items-center gap-1">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <FooterActionButton
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    aria-label="Footer regenerate"
+                    icon={<RefreshCw className="h-3.5 w-3.5" />}
+                    label="Regenerate"
+                    disabled={isStreaming || !graphNode.prompt}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      onRegenerate?.(id)
+                    }}
+                  />
+                </TooltipTrigger>
+                <TooltipContent side="top">Regenerate</TooltipContent>
+              </Tooltip>
 
-      {/* Hover + button */}
-      {hovered && !isStreaming && !isEditing ? (
-        <button
-          className="nodrag absolute -bottom-3.5 left-1/2 z-10 flex h-7 w-7 -translate-x-1/2 items-center justify-center rounded-full bg-slate-600 text-sm font-bold text-white shadow-lg transition-all hover:bg-slate-700 hover:shadow-xl"
-          onClick={(e) => {
-            e.stopPropagation()
-            onAddChild?.(id)
-          }}
-          aria-label="Add follow-up node"
-        >
-          +
-        </button>
-      ) : null}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <FooterActionButton
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    aria-label="Footer follow up"
+                    icon={<Plus className="h-3.5 w-3.5" />}
+                    label="Follow up"
+                    disabled={isStreaming || isEditing}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      onAddChild?.(id)
+                    }}
+                  />
+                </TooltipTrigger>
+                <TooltipContent side="top">Follow up</TooltipContent>
+              </Tooltip>
+
+              <Popover open={colorPickerOpen} onOpenChange={setColorPickerOpen}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <PopoverTrigger asChild>
+                      <FooterActionButton
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        aria-label="Footer color"
+                        icon={<Palette className="h-3.5 w-3.5" />}
+                        label="Color"
+                        onClick={(event) => event.stopPropagation()}
+                      />
+                    </PopoverTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">Color</TooltipContent>
+                </Tooltip>
+                <PopoverContent
+                  align="start"
+                  className="w-auto p-2"
+                  onPointerDownOutside={() => setColorPickerOpen(false)}
+                >
+                  <div className="flex flex-wrap gap-1.5">
+                    {NODE_COLOR_PRESETS.map((preset) => (
+                      <Button
+                        key={preset.label}
+                        type="button"
+                        size="icon"
+                        variant="outline"
+                        className={cn(
+                          "h-6 w-6 rounded-full border-2",
+                          graphNode.colorToken === preset.value || (!graphNode.colorToken && !preset.value)
+                            ? "border-primary"
+                            : "border-border",
+                        )}
+                        style={{ background: preset.value || "var(--node-topic-bg)" }}
+                        aria-label={`Set ${preset.label} color`}
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          onSetColor?.(id, preset.value || undefined)
+                          setColorPickerOpen(false)
+                        }}
+                      />
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {isStreaming ? <Spinner className="ml-0.5 size-4 text-muted-foreground" aria-label="Generating response" /> : null}
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <FooterActionButton
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    aria-label="Footer delete"
+                    icon={<Trash2 className="h-3.5 w-3.5" />}
+                    label="Delete"
+                    className="ml-auto border-destructive/40 text-destructive hover:bg-destructive/10"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      onDeleteNode?.(id)
+                    }}
+                  />
+                </TooltipTrigger>
+                <TooltipContent side="top">Delete</TooltipContent>
+              </Tooltip>
+          </div>
+        </CardFooter>
+      </Card>
+
+      <Handle type="source" position={Position.Bottom} className="left-1/2! h-4! w-4! bg-border!" />
     </div>
   )
 }

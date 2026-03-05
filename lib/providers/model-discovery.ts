@@ -21,9 +21,23 @@ type ProviderModelsInput = {
   auth: ProviderAuthCredential
 }
 
+function canonicalProviderId(providerId: string): string {
+  if (providerId === "github-models" || providerId === "github-copilot" || providerId === "github-copilot-enterprise") {
+    return "github"
+  }
+  if (providerId === "gemini") {
+    return "google"
+  }
+  if (providerId === "bedrock") {
+    return "amazon-bedrock"
+  }
+  return providerId
+}
+
 const LIVE_DISCOVERY_PROVIDER_IDS = new Set([
   "openai",
   "openrouter",
+  "github",
   "github-models",
   "github-copilot",
   "github-copilot-enterprise",
@@ -31,6 +45,16 @@ const LIVE_DISCOVERY_PROVIDER_IDS = new Set([
   "google",
   "gemini",
 ])
+
+const OPENAI_OAUTH_MODELS: ProviderModelOption[] = [
+  { id: "gpt-5.3-codex", name: "GPT-5.3 Codex" },
+  { id: "gpt-5.2-codex", name: "GPT-5.2 Codex" },
+  { id: "gpt-5.1-codex-max", name: "GPT-5.1 Codex Max" },
+  { id: "gpt-5.1-codex-mini", name: "GPT-5.1 Codex Mini" },
+  { id: "gpt-5.1-codex", name: "GPT-5.1 Codex" },
+  { id: "gpt-5.2", name: "GPT-5.2" },
+]
+const ANTHROPIC_REQUIRED_BETAS = ["oauth-2025-04-20", "interleaved-thinking-2025-05-14"]
 
 function dedupeAndSortModels(models: ProviderModelOption[]): ProviderModelOption[] {
   const seen = new Set<string>()
@@ -57,12 +81,35 @@ function catalogModelsFor(providerId: string, providerName?: string): ProviderMo
   }
 }
 
+function normalizeDomain(value: string): string {
+  return value.replace(/^https?:\/\//, "").replace(/\/+$/, "")
+}
+
+function resolveCopilotBaseUrl(baseUrl: string, auth: ProviderAuthCredential): string {
+  if (auth.type === "oauth" && typeof auth.enterpriseUrl === "string" && auth.enterpriseUrl.length > 0) {
+    return `https://copilot-api.${normalizeDomain(auth.enterpriseUrl)}`
+  }
+  if (baseUrl.includes("githubcopilot")) {
+    return baseUrl
+  }
+  return "https://api.githubcopilot.com"
+}
+
 async function fetchOpenAiCompatibleModels(input: {
   baseUrl: string
   auth: ProviderAuthCredential
   includeCopilotHeaders?: boolean
 }): Promise<ProviderModelOption[]> {
-  const token = input.auth.type === "oauth" ? input.auth.access || input.auth.refresh : input.auth.type === "api" ? input.auth.key : input.auth.type === "wellknown" ? input.auth.token : ""
+  const token =
+    input.auth.type === "oauth"
+      ? input.includeCopilotHeaders
+        ? input.auth.refresh || input.auth.access
+        : input.auth.access || input.auth.refresh
+      : input.auth.type === "api"
+        ? input.auth.key
+        : input.auth.type === "wellknown"
+          ? input.auth.token
+          : ""
   if (!token) {
     return []
   }
@@ -116,14 +163,20 @@ async function fetchAnthropicModels(baseUrl: string, auth: ProviderAuthCredentia
     headers.set("x-api-key", auth.key)
   } else if (auth.type === "oauth") {
     headers.set("authorization", `Bearer ${auth.access}`)
-    headers.set("anthropic-beta", "oauth-2025-04-20")
+    headers.set("anthropic-beta", ANTHROPIC_REQUIRED_BETAS.join(","))
+    headers.set("user-agent", "claude-cli/2.1.2 (external, cli)")
   } else if (auth.type === "wellknown") {
     headers.set("authorization", `Bearer ${auth.token}`)
   } else {
     return []
   }
 
-  const response = await fetch(joinProviderUrl(baseUrl, "models"), {
+  const endpoint = joinProviderUrl(baseUrl, "models")
+  if (auth.type === "oauth" && !endpoint.searchParams.has("beta")) {
+    endpoint.searchParams.set("beta", "true")
+  }
+
+  const response = await fetch(endpoint, {
     method: "GET",
     headers,
   })
@@ -199,15 +252,22 @@ async function fetchGeminiModels(baseUrl: string, auth: ProviderAuthCredential):
 }
 
 async function fetchLiveModels(providerId: string, baseUrl: string, auth: ProviderAuthCredential): Promise<ProviderModelOption[]> {
+  if (providerId === "openai" && auth.type === "oauth") {
+    return OPENAI_OAUTH_MODELS
+  }
   if (providerId === "anthropic") {
     return fetchAnthropicModels(baseUrl, auth)
   }
   if (providerId === "google" || providerId === "gemini") {
     return fetchGeminiModels(baseUrl, auth)
   }
-  if (providerId === "github-copilot" || providerId === "github-copilot-enterprise") {
+  if (
+    providerId === "github-copilot" ||
+    providerId === "github-copilot-enterprise" ||
+    (providerId === "github" && auth.type === "oauth")
+  ) {
     return fetchOpenAiCompatibleModels({
-      baseUrl,
+      baseUrl: resolveCopilotBaseUrl(baseUrl, auth),
       auth,
       includeCopilotHeaders: true,
     })
@@ -220,15 +280,16 @@ async function fetchLiveModels(providerId: string, baseUrl: string, auth: Provid
 }
 
 export async function discoverProviderModels(input: ProviderModelsInput): Promise<ProviderModelsResult> {
-  const provider = await getProviderById(input.providerId)
+  const canonicalProvider = canonicalProviderId(input.providerId)
+  const provider = await getProviderById(canonicalProvider)
   if (!provider) {
     return {
-      ...catalogModelsFor(input.providerId),
+      ...catalogModelsFor(canonicalProvider),
       error: "Unknown provider",
     }
   }
 
-  const providerId = provider.id
+  const providerId = canonicalProvider
   const now = new Date().toISOString()
   const fallbackModels = dedupeAndSortModels(
     listProviderModels(provider).map((model) => ({
@@ -242,7 +303,7 @@ export async function discoverProviderModels(input: ProviderModelsInput): Promis
   if (!shouldAttemptLive || !baseUrl) {
     return {
       providerId,
-      providerName: provider.name,
+      providerName: providerId === "github" ? "GitHub" : provider.name,
       models: fallbackModels,
       source: "catalog-fallback",
       fetchedAt: now,
@@ -253,7 +314,7 @@ export async function discoverProviderModels(input: ProviderModelsInput): Promis
     const models = dedupeAndSortModels(await fetchLiveModels(providerId, baseUrl, input.auth))
     return {
       providerId,
-      providerName: provider.name,
+      providerName: providerId === "github" ? "GitHub" : provider.name,
       models,
       source: "live",
       fetchedAt: now,
@@ -262,7 +323,7 @@ export async function discoverProviderModels(input: ProviderModelsInput): Promis
     const message = error instanceof Error ? error.message : "Model discovery failed"
     return {
       providerId,
-      providerName: provider.name,
+      providerName: providerId === "github" ? "GitHub" : provider.name,
       models: [],
       source: "live",
       fetchedAt: now,

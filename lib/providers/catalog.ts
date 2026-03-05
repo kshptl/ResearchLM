@@ -41,7 +41,7 @@ export type ProviderCatalogProvider = {
 
 export type ProviderCatalog = Record<string, ProviderCatalogProvider>
 
-const PROVIDER_PRIORITY_ORDER = ["opencode", "anthropic", "github-copilot", "openai", "google", "openrouter", "vercel"] as const
+const PROVIDER_PRIORITY_ORDER = ["opencode", "anthropic", "github", "openai", "google", "openrouter", "vercel"] as const
 const CATALOG_URL = "https://models.dev/api.json"
 const CACHE_TTL_MS = 10 * 60 * 1000
 
@@ -87,6 +87,14 @@ const fallbackCatalog: ProviderCatalog = {
     apiBaseUrl: "https://openrouter.ai/api/v1",
     npmPackage: "@openrouter/ai-sdk-provider",
     envKeys: ["OPENROUTER_API_KEY"],
+    models: {},
+  },
+  github: {
+    id: "github",
+    name: "GitHub",
+    apiBaseUrl: "https://models.inference.ai.azure.com",
+    npmPackage: "@ai-sdk/openai-compatible",
+    envKeys: ["GITHUB_TOKEN"],
     models: {},
   },
   "github-models": {
@@ -253,6 +261,15 @@ export function listProviderModels(provider: ProviderCatalogProvider): ProviderC
 
 export async function getProviderById(providerId: string): Promise<ProviderCatalogProvider | undefined> {
   const catalog = await getProviderCatalog()
+  if (providerId === "github-copilot-enterprise") {
+    return catalog.github ?? catalog["github-copilot"] ?? catalog["github-models"]
+  }
+  if (providerId === "github-copilot" || providerId === "github-models") {
+    return catalog.github ?? catalog[providerId]
+  }
+  if (providerId === "github") {
+    return catalog.github ?? catalog["github-models"] ?? catalog["github-copilot"]
+  }
   if (catalog[providerId]) {
     return catalog[providerId]
   }

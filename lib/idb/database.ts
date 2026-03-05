@@ -14,9 +14,24 @@ type GenerationRequestRecord = {
 }
 
 export const DB_NAME = "researchlm"
-export const DB_VERSION = 2
+export const DB_VERSION = 3
+
+export type ChatSessionRecord = {
+  id: string
+  title: string
+  workspaceId: string
+  createdAt: string
+  updatedAt: string
+  lastOpenedAt: string
+  lastSnapshotAt?: string
+  nodeCount: number
+  edgeCount: number
+  provider?: string
+  model?: string
+}
 
 type Stores = {
+  chatSessions: ChatSessionRecord
   workspaces: Workspace
   canvases: Canvas
   nodes: GraphNode
@@ -33,6 +48,7 @@ type Stores = {
 }
 
 const STORE_NAMES: Array<keyof Stores> = [
+  "chatSessions",
   "workspaces",
   "canvases",
   "nodes",

@@ -64,7 +64,20 @@ function parseOpenAiAccountId(tokens: { id_token?: string; access_token?: string
       return chatAccountId
     }
     const topLevel = decoded.chatgpt_account_id
-    return typeof topLevel === "string" ? topLevel : undefined
+    if (typeof topLevel === "string") {
+      return topLevel
+    }
+    const organizations = decoded.organizations
+    if (Array.isArray(organizations)) {
+      const first = organizations[0]
+      if (first && typeof first === "object" && !Array.isArray(first)) {
+        const orgId = (first as Record<string, unknown>).id
+        if (typeof orgId === "string") {
+          return orgId
+        }
+      }
+    }
+    return undefined
   } catch {
     return undefined
   }
@@ -133,6 +146,46 @@ function parseCallbackInput(callbackInput: string): { code?: string; state?: str
   }
 
   return { code: normalized }
+}
+
+function parseAnthropicCallbackInput(callbackInput: string): { code?: string; state?: string } {
+  const trimmed = callbackInput.trim()
+  if (!trimmed) {
+    return {}
+  }
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    try {
+      const url = new URL(trimmed)
+      const code = url.searchParams.get("code") ?? undefined
+      const state = url.searchParams.get("state") ?? undefined
+      if (code) {
+        return { code, state }
+      }
+    } catch {
+      return {}
+    }
+  }
+
+  const normalized = trimmed.startsWith("?") ? trimmed.slice(1) : trimmed
+  if (normalized.includes("=")) {
+    const params = new URLSearchParams(normalized)
+    const code = params.get("code") ?? undefined
+    const state = params.get("state") ?? undefined
+    if (code) {
+      return { code, state }
+    }
+  }
+
+  const split = normalized.split("#")
+  if (split[0] && split[0].length > 0) {
+    return {
+      code: split[0],
+      state: split[1],
+    }
+  }
+
+  return {}
 }
 
 async function startOpenAiBrowserFlow(): Promise<Response> {
@@ -329,7 +382,7 @@ async function startCopilotFlow(input: { deploymentType?: "github.com" | "enterp
   }
 
   const sessionId = putCopilotSession({
-    providerId: "github-copilot",
+    providerId: "github",
     domain,
     deviceCode: deviceData.device_code,
     intervalSeconds: Math.max(deviceData.interval || 5, 1),
@@ -378,7 +431,7 @@ async function pollCopilotFlow(sessionId: string): Promise<Response> {
     deleteCopilotSession(sessionId)
     return NextResponse.json({
       status: "success",
-      provider: session.enterpriseUrl ? "github-copilot-enterprise" : "github-copilot",
+      provider: "github",
       auth: {
         type: "oauth",
         access: payload.access_token,
@@ -433,8 +486,8 @@ async function completeAnthropicFlow(sessionId: string, callbackInput: string): 
     return NextResponse.json({ status: "failed", message: "OAuth session not found or expired." }, { status: 404 })
   }
 
-  const code = callbackInput.trim()
-  if (!code) {
+  const parsed = parseAnthropicCallbackInput(callbackInput)
+  if (!parsed.code) {
     return NextResponse.json({ status: "failed", message: "Authorization code is required." }, { status: 400 })
   }
 
@@ -444,8 +497,8 @@ async function completeAnthropicFlow(sessionId: string, callbackInput: string): 
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      code: code.split("#")[0],
-      state: code.split("#")[1],
+      code: parsed.code,
+      state: parsed.state,
       grant_type: "authorization_code",
       client_id: ANTHROPIC_CLIENT_ID,
       redirect_uri: ANTHROPIC_REDIRECT_URI,
@@ -521,7 +574,7 @@ export async function POST(request: Request, context: { params: Promise<{ provid
       }
     }
 
-    if (providerId === "github-copilot") {
+    if (providerId === "github" || providerId === "github-copilot") {
       if (body.action === "copilot-start") {
         return await startCopilotFlow({
           deploymentType: body.deploymentType,

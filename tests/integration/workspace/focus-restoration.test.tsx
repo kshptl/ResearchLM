@@ -1,31 +1,34 @@
 import React from "react"
-import { fireEvent, render, screen, waitFor } from "@testing-library/react"
-import { describe, expect, it } from "vitest"
+import { fireEvent, render, screen } from "@testing-library/react"
+import { describe, expect, it, vi } from "vitest"
 import { ProviderCredentialsForm } from "@/components/workspace/provider-settings/provider-credentials-form"
 
-describe("focus restoration", () => {
-  it("restores focus to saved-credentials trigger after panel closure", async () => {
+describe("provider credentials table", () => {
+  it("renders saved providers and supports revoke action", () => {
+    const revoke = vi.fn()
     render(
       <ProviderCredentialsForm
         onSave={() => undefined}
+        onRevoke={revoke}
         credentials={[
           {
             id: "cred-1",
             provider: "openai",
             status: "active",
+            authType: "api-key",
             updatedAt: new Date().toISOString()
           }
         ]}
       />
     )
 
-    const trigger = screen.getByRole("button", { name: "Hide saved credentials" })
-    trigger.focus()
+    expect(screen.getByText("Saved Providers")).toBeInTheDocument()
+    expect(screen.getByRole("cell", { name: "OpenAI" })).toBeInTheDocument()
+    expect(screen.getByRole("cell", { name: "API Key" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Revoke" })).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole("button", { name: "Close panel" }))
+    fireEvent.click(screen.getByRole("button", { name: "Revoke" }))
 
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Manage saved credentials" })).toHaveFocus()
-    })
+    expect(revoke).toHaveBeenCalledWith("cred-1")
   })
 })

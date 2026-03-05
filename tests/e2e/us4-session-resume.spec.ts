@@ -1,17 +1,17 @@
 import { expect, test } from "@playwright/test"
 
-test("resume, backup, and conflict flow remains actionable", async ({ page }) => {
+test("autosaved chat appears in resume list on next load", async ({ page }) => {
   await page.goto("/")
-  await expect(page.getByText("Local persistence ready")).toBeVisible()
+  await expect(page.getByRole("button", { name: "New Chat" })).toBeVisible()
 
-  await page.getByRole("button", { name: "Snapshot now" }).click()
-  await page.getByRole("button", { name: "Export backup" }).click()
-  await page.getByRole("button", { name: "Import backup" }).click()
+  await page.getByRole("button", { name: "New Chat" }).dblclick()
+  const titleInput = page.getByRole("textbox", { name: "Chat title" })
+  await titleInput.fill("Playwright Resume Chat")
+  await titleInput.press("Enter")
+  await page.waitForTimeout(800)
 
-  await page.getByRole("button", { name: "Simulate conflict" }).click()
-  await expect(page.getByText(/Conflict detected for/i)).toBeVisible()
-  await expect(page.getByRole("button", { name: "Retry sync" })).toBeVisible()
-  await expect(page.getByRole("button", { name: "Open recovery options" })).toBeVisible()
-  await page.getByRole("button", { name: "Dismiss notice" }).click()
-  await expect(page.getByText(/Conflict detected for/i)).toHaveCount(0)
+  await expect(page.getByRole("button", { name: "Playwright Resume Chat" })).toBeVisible()
+  await page.reload()
+
+  await expect(page.getByRole("button", { name: "Playwright Resume Chat" })).toBeVisible()
 })

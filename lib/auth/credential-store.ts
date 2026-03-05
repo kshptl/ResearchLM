@@ -29,6 +29,19 @@ type LegacyStoredCredential = {
 const STORAGE_KEY = "researchlm:provider-credentials"
 const memoryStore = new Map<string, StoredCredential>()
 
+function canonicalProviderId(provider: string): string {
+  if (provider === "github-models" || provider === "github-copilot" || provider === "github-copilot-enterprise") {
+    return "github"
+  }
+  if (provider === "bedrock") {
+    return "amazon-bedrock"
+  }
+  if (provider === "gemini") {
+    return "google"
+  }
+  return provider
+}
+
 function encode(value: string): string {
   const bytes = new TextEncoder().encode(value)
 
@@ -213,7 +226,7 @@ function createStoredCredential(provider: string, payload: ProviderAuthCredentia
   const now = new Date().toISOString()
   return {
     id: crypto.randomUUID(),
-    provider,
+    provider: canonicalProviderId(provider),
     authType: mapCredentialToLegacyType(payload),
     encryptedValue: encode(credentialPrimarySecret(payload)),
     encryptedPayload: serializeCredentialPayload(payload),
@@ -284,7 +297,26 @@ export function getCredentialAuth(recordOrId: StoredCredential | string): Provid
 }
 
 export function getActiveCredentialByProvider(provider: string): StoredCredential | undefined {
-  return listCredentials(provider).find((item) => item.status === "active")
+  const targetProvider = canonicalProviderId(provider)
+  const matches = listCredentials().filter(
+    (item) => item.status === "active" && canonicalProviderId(item.provider) === targetProvider,
+  )
+  if (matches.length === 0) {
+    return undefined
+  }
+
+  // For merged GitHub provider, prefer API/Models credentials when present.
+  if (targetProvider === "github") {
+    const preferred = matches.find((item) => {
+      const auth = getCredentialAuth(item)
+      return auth?.type === "api" || auth?.type === "wellknown"
+    })
+    if (preferred) {
+      return preferred
+    }
+  }
+
+  return matches[0]
 }
 
 export function listCredentials(provider?: string): StoredCredential[] {

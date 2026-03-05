@@ -14,6 +14,7 @@ const adapters: Record<string, ProviderAdapter> = {
   gemini: geminiAdapter,
   google: geminiAdapter,
   openrouter: openRouterAdapter,
+  github: githubCopilotAdapter,
   "github-models": githubModelsAdapter,
   "github-copilot": githubCopilotAdapter,
   "github-copilot-enterprise": githubCopilotAdapter,

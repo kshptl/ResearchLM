@@ -1,14 +1,26 @@
 "use client"
 
 import React, { useEffect, useMemo, useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList } from "@/components/ui/combobox"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Separator } from "@/components/ui/separator"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { credentialPrimarySecret, type ProviderAuthCredential } from "@/lib/auth/auth-types"
+import { getCredentialAuth } from "@/lib/auth/credential-store"
 import { getProviderAuthMethods, type ProviderAuthMethod } from "@/lib/auth/method-registry"
-import type { ProviderAuthCredential } from "@/lib/auth/auth-types"
 
 type CredentialSummary = {
   id: string
   provider: string
   status: "active" | "invalid" | "revoked"
   updatedAt: string
+  authType?: string
+  authPayload?: ProviderAuthCredential
 }
 
 type ProviderOption = {
@@ -25,7 +37,6 @@ type SavePayload = {
 
 type Props = {
   onSave: (value: SavePayload) => void
-  onReplace?: (value: { credentialId: string; credential: string }) => void
   onRevoke?: (credentialId: string) => void
   credentials?: CredentialSummary[]
 }
@@ -45,10 +56,16 @@ const FALLBACK_PROVIDERS: ProviderOption[] = [
   { id: "anthropic", name: "Anthropic" },
   { id: "google", name: "Google" },
   { id: "openrouter", name: "OpenRouter" },
-  { id: "github-models", name: "GitHub Models" },
-  { id: "github-copilot", name: "GitHub Copilot" },
+  { id: "github", name: "GitHub" },
   { id: "amazon-bedrock", name: "Amazon Bedrock" },
 ]
+
+function normalizeProviderOption(input: { id: string; name: string }): ProviderOption {
+  if (input.id === "github-models" || input.id === "github-copilot") {
+    return { id: "github", name: "GitHub" }
+  }
+  return input
+}
 
 function mapMethodToLegacyType(method: ProviderAuthMethod): "api-key" | "oauth" | "aws-profile" {
   if (method.type === "oauth") {
@@ -77,7 +94,74 @@ function mapAuthToLegacyCredential(auth: ProviderAuthCredential): string {
   }
 }
 
-export function ProviderCredentialsForm({ onSave, onReplace, onRevoke, credentials = [] }: Props) {
+function compactMethodLabel(providerId: string, method: ProviderAuthMethod): string {
+  if (method.type === "oauth") {
+    if (providerId === "openai") {
+      return "ChatGPT OAuth"
+    }
+    if (providerId === "anthropic") {
+      return "Claude OAuth"
+    }
+    if (providerId === "github") {
+      return "Copilot OAuth"
+    }
+    return "OAuth"
+  }
+
+  if (method.type === "aws-profile") {
+    return "AWS Profile"
+  }
+
+  if (method.type === "aws-env-chain") {
+    return "Env Chain"
+  }
+
+  return "API Key"
+}
+
+function authMethodLabel(authType?: string, authPayload?: ProviderAuthCredential): string {
+  const resolvedType = authPayload?.type ?? authType
+
+  switch (resolvedType) {
+    case "api":
+    case "api-key":
+      return "API Key"
+    case "oauth":
+      return "OAuth"
+    case "aws-profile":
+      return "AWS Profile"
+    case "aws-env-chain":
+      return "AWS Env Chain"
+    case "wellknown":
+      return "Token"
+    default:
+      return "Unknown"
+  }
+}
+
+function maskSecret(secret: string): string {
+  const trimmed = secret.trim()
+  if (!trimmed) {
+    return "—"
+  }
+
+  if (trimmed.length <= 8) {
+    return "••••"
+  }
+
+  return `${trimmed.slice(0, 4)}…${trimmed.slice(-4)}`
+}
+
+function resolveCredentialSecret(credential: CredentialSummary): string {
+  const auth = credential.authPayload ?? getCredentialAuth(credential.id)
+  if (!auth) {
+    return "—"
+  }
+
+  return maskSecret(credentialPrimarySecret(auth))
+}
+
+export function ProviderCredentialsForm({ onSave, onRevoke, credentials = [] }: Props) {
   const [providerOptions, setProviderOptions] = useState<ProviderOption[]>(FALLBACK_PROVIDERS)
   const [provider, setProvider] = useState(FALLBACK_PROVIDERS[0]?.id ?? "openai")
   const [selectedMethodId, setSelectedMethodId] = useState<string>("")
@@ -86,10 +170,6 @@ export function ProviderCredentialsForm({ onSave, onReplace, onRevoke, credentia
   const [oauthInput, setOauthInput] = useState("")
   const [copilotDeploymentType, setCopilotDeploymentType] = useState<"github.com" | "enterprise">("github.com")
   const [copilotEnterpriseUrl, setCopilotEnterpriseUrl] = useState("")
-  const [replacementCredential, setReplacementCredential] = useState("")
-  const [selectedCredentialId, setSelectedCredentialId] = useState<string>("")
-  const [showSavedCredentials, setShowSavedCredentials] = useState(true)
-  const savedCredentialsTriggerRef = React.useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     if (typeof fetch !== "function") {
@@ -107,10 +187,15 @@ export function ProviderCredentialsForm({ onSave, onReplace, onRevoke, credentia
           return
         }
         setProviderOptions(
-          body.providers.map((entry) => ({
-            id: entry.id,
-            name: entry.name,
-          })),
+          Array.from(
+            body.providers.reduce<Map<string, ProviderOption>>((accumulator, entry) => {
+              const normalized = normalizeProviderOption({ id: entry.id, name: entry.name })
+              if (!accumulator.has(normalized.id)) {
+                accumulator.set(normalized.id, normalized)
+              }
+              return accumulator
+            }, new Map()).values(),
+          ),
         )
       })
       .catch(() => undefined)
@@ -120,17 +205,49 @@ export function ProviderCredentialsForm({ onSave, onReplace, onRevoke, credentia
   }, [])
 
   const providerMethods = useMemo(() => getProviderAuthMethods(provider), [provider])
+  const visibleMethods = useMemo(() => {
+    const byType = new Map<ProviderAuthMethod["type"], ProviderAuthMethod>()
+    for (const method of providerMethods) {
+      if (!byType.has(method.type)) {
+        byType.set(method.type, method)
+      }
+    }
+    return Array.from(byType.values())
+  }, [providerMethods])
   const selectedMethod = useMemo(
-    () => providerMethods.find((method) => method.id === selectedMethodId) ?? providerMethods[0],
-    [providerMethods, selectedMethodId],
+    () => visibleMethods.find((method) => method.id === selectedMethodId) ?? visibleMethods[0],
+    [visibleMethods, selectedMethodId],
+  )
+  const selectedProviderOption = useMemo(
+    () => providerOptions.find((option) => option.id === provider) ?? null,
+    [provider, providerOptions],
+  )
+  const providerNameById = useMemo(
+    () =>
+      new Map(
+        providerOptions.map((option) => [option.id, option.name] as const),
+      ),
+    [providerOptions],
+  )
+  const visibleCredentials = useMemo(
+    () => credentials.filter((item) => item.status !== "revoked"),
+    [credentials],
   )
 
   useEffect(() => {
-    setSelectedMethodId(providerMethods[0]?.id ?? "")
+    setSelectedMethodId(visibleMethods[0]?.id ?? "")
     setOauthState(null)
     setOauthInput("")
     setCredential("")
-  }, [provider, providerMethods])
+  }, [provider, visibleMethods])
+
+  useEffect(() => {
+    setCredential("")
+    setOauthInput("")
+    if (oauthState && oauthState.method.id !== selectedMethodId) {
+      setOauthState(null)
+    }
+  }, [selectedMethodId, oauthState])
 
   async function startOauthFlow(method: ProviderAuthMethod): Promise<void> {
     if (!method.oauthFlow) {
@@ -141,7 +258,7 @@ export function ProviderCredentialsForm({ onSave, onReplace, onRevoke, credentia
       action: method.oauthFlow.startAction,
     }
 
-    if (provider === "github-copilot") {
+    if (provider === "github") {
       body.deploymentType = copilotDeploymentType
       if (copilotDeploymentType === "enterprise") {
         body.enterpriseUrl = copilotEnterpriseUrl
@@ -201,6 +318,7 @@ export function ProviderCredentialsForm({ onSave, onReplace, onRevoke, credentia
     const payload = (await response.json()) as {
       status: "success" | "failed"
       message?: string
+      provider?: string
       auth?: ProviderAuthCredential
     }
 
@@ -209,8 +327,9 @@ export function ProviderCredentialsForm({ onSave, onReplace, onRevoke, credentia
       return
     }
 
+    const resolvedProvider = payload.provider ?? provider
     onSave({
-      provider,
+      provider: resolvedProvider,
       type: mapMethodToLegacyType(oauthState.method),
       credential: mapAuthToLegacyCredential(payload.auth),
       authPayload: payload.auth,
@@ -237,12 +356,14 @@ export function ProviderCredentialsForm({ onSave, onReplace, onRevoke, credentia
       status: "success" | "pending" | "failed"
       message?: string
       intervalSeconds?: number
+      provider?: string
       auth?: ProviderAuthCredential
     }
 
     if (payload.status === "success" && payload.auth) {
+      const resolvedProvider = payload.provider ?? provider
       onSave({
-        provider,
+        provider: resolvedProvider,
         type: mapMethodToLegacyType(oauthState.method),
         credential: mapAuthToLegacyCredential(payload.auth),
         authPayload: payload.auth,
@@ -267,6 +388,9 @@ export function ProviderCredentialsForm({ onSave, onReplace, onRevoke, credentia
     event.preventDefault()
 
     if (!selectedMethod) {
+      return
+    }
+    if (selectedMethod.type === "oauth") {
       return
     }
 
@@ -302,192 +426,184 @@ export function ProviderCredentialsForm({ onSave, onReplace, onRevoke, credentia
   }
 
   return (
-    <form className="space-y-2 rounded-md border border-[hsl(var(--border))] p-3" onSubmit={saveManualCredential}>
-      <p className="text-xs font-semibold">Provider Credentials (BYOK)</p>
-
-      <select value={provider} onChange={(event) => setProvider(event.target.value)} className="w-full rounded border p-1 text-xs">
-        {providerOptions.map((option) => (
-          <option key={option.id} value={option.id}>
-            {option.name}
-          </option>
-        ))}
-      </select>
-
-      <select value={selectedMethod?.id ?? ""} onChange={(event) => setSelectedMethodId(event.target.value)} className="w-full rounded border p-1 text-xs">
-        {providerMethods.map((method) => (
-          <option key={method.id} value={method.id}>
-            {method.label}
-          </option>
-        ))}
-      </select>
-
-      {selectedMethod?.description ? <p className="text-[11px] text-slate-600">{selectedMethod.description}</p> : null}
-
-      {provider === "github-copilot" && selectedMethod?.id === "github-copilot-oauth" ? (
-        <div className="space-y-1 rounded border border-slate-200 p-2">
-          <label className="block text-[11px] font-semibold text-slate-600">GitHub deployment</label>
-          <select
-            value={copilotDeploymentType}
-            onChange={(event) => setCopilotDeploymentType(event.target.value as "github.com" | "enterprise")}
-            className="w-full rounded border p-1 text-xs"
-          >
-            <option value="github.com">GitHub.com</option>
-            <option value="enterprise">GitHub Enterprise</option>
-          </select>
-          {copilotDeploymentType === "enterprise" ? (
-            <input
-              type="text"
-              value={copilotEnterpriseUrl}
-              onChange={(event) => setCopilotEnterpriseUrl(event.target.value)}
-              className="w-full rounded border p-1 text-xs"
-              placeholder="company.ghe.com"
-            />
-          ) : null}
-        </div>
-      ) : null}
-
-      {selectedMethod?.type === "oauth" ? (
-        <div className="space-y-2 rounded border border-slate-200 p-2">
-          <button type="button" className="rounded border px-2 py-1 text-xs" onClick={() => void startOauthFlow(selectedMethod)}>
-            Start OAuth
-          </button>
-
-          {oauthState?.verificationUrl ? (
-            <p className="text-[11px] text-slate-700">
-              Open:{" "}
-              <a className="text-sky-700 underline" href={oauthState.verificationUrl} target="_blank" rel="noreferrer">
-                {oauthState.verificationUrl}
-              </a>
-            </p>
-          ) : null}
-          {oauthState?.userCode ? <p className="text-[11px] text-slate-700">Code: {oauthState.userCode}</p> : null}
-
-          {selectedMethod.oauthFlow?.completeAction ? (
-            <div className="space-y-1">
-              <input
-                type="text"
-                value={oauthInput}
-                onChange={(event) => setOauthInput(event.target.value)}
-                className="w-full rounded border p-1 text-xs"
-                placeholder={selectedMethod.oauthFlow.callbackInputLabel ?? "Authorization code"}
+    <form onSubmit={saveManualCredential} className="text-xs">
+      <Card className="gap-0 border-border py-0">
+        <CardContent className="space-y-2.5 px-2.5 py-2.5">
+          <div className="space-y-1">
+            <Label className="text-[11px] font-semibold text-muted-foreground">Provider</Label>
+            <Combobox
+              value={selectedProviderOption}
+              onValueChange={(value) => {
+                if (!value) {
+                  return
+                }
+                setProvider(value.id)
+              }}
+              items={providerOptions}
+              autoHighlight
+              itemToStringLabel={(value) => value.name}
+              itemToStringValue={(value) => value.id}
+            >
+              <ComboboxInput
+                className="h-8 w-full [&_[data-slot=input]]:h-8 [&_[data-slot=input]]:text-xs"
+                placeholder="Select a provider"
               />
-              <button type="button" className="rounded border px-2 py-1 text-xs" onClick={() => void completeOauthFlow()}>
-                Complete OAuth
-              </button>
+              <ComboboxContent>
+                <ComboboxEmpty>No provider found.</ComboboxEmpty>
+                <ComboboxList>
+                  {(option: ProviderOption) => (
+                    <ComboboxItem key={option.id} value={option}>
+                      {option.name}
+                    </ComboboxItem>
+                  )}
+                </ComboboxList>
+              </ComboboxContent>
+            </Combobox>
+          </div>
+
+          {visibleMethods.length > 0 ? (
+            <div className="space-y-2">
+              <Label className="text-[11px] font-semibold text-muted-foreground">Connect With</Label>
+              <Tabs value={selectedMethod?.id} onValueChange={setSelectedMethodId} className="w-full">
+                <TabsList className="h-8 w-full justify-start p-1">
+                  {visibleMethods.map((method) => (
+                    <TabsTrigger key={method.id} value={method.id} className="text-xs">
+                      {compactMethodLabel(provider, method)}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+                {visibleMethods.map((method) => {
+                  const methodState = oauthState?.method.id === method.id ? oauthState : null
+                  return (
+                    <TabsContent key={method.id} value={method.id} className="mt-1.5 space-y-1.5 rounded-md border border-border p-2">
+                      {provider === "github" && method.id === "github-copilot-oauth" ? (
+                        <div className="space-y-1">
+                          <Label className="text-[11px] font-semibold text-muted-foreground">GitHub deployment</Label>
+                          <Select value={copilotDeploymentType} onValueChange={(value) => setCopilotDeploymentType(value as "github.com" | "enterprise")}>
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="github.com">GitHub.com</SelectItem>
+                              <SelectItem value="enterprise">GitHub Enterprise</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {copilotDeploymentType === "enterprise" ? (
+                            <Input
+                              type="text"
+                              value={copilotEnterpriseUrl}
+                              onChange={(event) => setCopilotEnterpriseUrl(event.target.value)}
+                              className="h-8 text-xs"
+                              placeholder="company.ghe.com"
+                            />
+                          ) : null}
+                        </div>
+                      ) : null}
+
+                      {method.type === "oauth" ? (
+                        <>
+                          <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => void startOauthFlow(method)}>
+                            Start OAuth
+                          </Button>
+                          {methodState?.verificationUrl ? (
+                            <p className="break-all text-[11px] text-foreground">
+                              Open:{" "}
+                              <a className="text-primary underline" href={methodState.verificationUrl} target="_blank" rel="noreferrer">
+                                {methodState.verificationUrl}
+                              </a>
+                            </p>
+                          ) : null}
+                          {methodState?.userCode ? <p className="text-[11px] text-foreground">Code: {methodState.userCode}</p> : null}
+                          {method.oauthFlow?.completeAction ? (
+                            <div className="space-y-1">
+                              <Input
+                                type="text"
+                                value={oauthInput}
+                                onChange={(event) => setOauthInput(event.target.value)}
+                                className="h-8 text-xs"
+                                placeholder={method.oauthFlow.callbackInputLabel ?? "Authorization code"}
+                              />
+                              <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => void completeOauthFlow()}>
+                                Complete OAuth
+                              </Button>
+                            </div>
+                          ) : null}
+                          {method.oauthFlow?.pollAction ? (
+                            <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => void pollOauthFlow()}>
+                              Poll Authorization
+                            </Button>
+                          ) : null}
+                          {methodState?.message ? <p className="text-[11px] text-destructive">{methodState.message}</p> : null}
+                        </>
+                      ) : (
+                        <>
+                          {method.type !== "aws-env-chain" ? (
+                            <Input
+                              type="password"
+                              value={credential}
+                              onChange={(event) => setCredential(event.target.value)}
+                              className="h-8 text-xs"
+                              placeholder={method.placeholder ?? "Enter credential"}
+                            />
+                          ) : (
+                            <p className="text-[11px] text-muted-foreground">Uses AWS environment variables, IAM role, or metadata chain.</p>
+                          )}
+                          <Button type="submit" variant="outline" size="sm" className="h-7 px-2 text-xs">
+                            Save credential
+                          </Button>
+                        </>
+                      )}
+                    </TabsContent>
+                  )
+                })}
+              </Tabs>
             </div>
           ) : null}
 
-          {selectedMethod.oauthFlow?.pollAction ? (
-            <button type="button" className="rounded border px-2 py-1 text-xs" onClick={() => void pollOauthFlow()}>
-              Poll Authorization
-            </button>
-          ) : null}
+          <Separator />
 
-          {oauthState?.intervalSeconds ? (
-            <p className="text-[11px] text-slate-600">Suggested poll interval: {oauthState.intervalSeconds}s</p>
-          ) : null}
-          {oauthState?.message ? <p className="text-[11px] text-rose-600">{oauthState.message}</p> : null}
-        </div>
-      ) : (
-        <>
-          {selectedMethod?.type !== "aws-env-chain" ? (
-            <input
-              type="password"
-              value={credential}
-              onChange={(event) => setCredential(event.target.value)}
-              className="w-full rounded border p-1 text-xs"
-              placeholder={selectedMethod?.placeholder ?? "Enter provider credential"}
-            />
-          ) : (
-            <p className="text-[11px] text-slate-600">No credential entry required. This saves an AWS env/role-chain profile.</p>
-          )}
-
-          <button type="submit" className="rounded border px-2 py-1 text-xs">
-            Save credential
-          </button>
-        </>
-      )}
-
-      {credentials.length > 0 ? (
-        <section className="space-y-2 rounded border border-[hsl(var(--border))] p-2">
-          <button
-            ref={savedCredentialsTriggerRef}
-            type="button"
-            className="rounded border px-2 py-1 text-xs"
-            onClick={() => setShowSavedCredentials((current) => !current)}
-          >
-            {showSavedCredentials ? "Hide saved credentials" : "Manage saved credentials"}
-          </button>
-
-          {showSavedCredentials ? (
-            <div className="space-y-2" role="region" aria-label="Saved credentials panel">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-600">Saved credentials</p>
-              <ul className="space-y-1">
-                {credentials.map((item) => (
-                  <li key={item.id} className="flex items-center justify-between gap-2 rounded bg-slate-50 px-2 py-1 text-xs">
-                    <span>
-                      {item.provider} ({item.status})
-                    </span>
-                    <button type="button" className="rounded border px-2 py-0.5" onClick={() => setSelectedCredentialId(item.id)}>
-                      Select
-                    </button>
-                  </li>
-                ))}
-              </ul>
-
-              <input
-                type="password"
-                value={replacementCredential}
-                onChange={(event) => setReplacementCredential(event.target.value)}
-                className="w-full rounded border p-1 text-xs"
-                placeholder="Replacement credential value"
-              />
-
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  className="rounded border px-2 py-1 text-xs"
-                  disabled={!selectedCredentialId || !replacementCredential}
-                  onClick={() => {
-                    if (!selectedCredentialId || !replacementCredential || !onReplace) {
-                      return
-                    }
-                    onReplace({ credentialId: selectedCredentialId, credential: replacementCredential })
-                    setReplacementCredential("")
-                  }}
-                >
-                  Replace selected
-                </button>
-                <button
-                  type="button"
-                  className="rounded border px-2 py-1 text-xs"
-                  disabled={!selectedCredentialId}
-                  onClick={() => {
-                    if (!selectedCredentialId || !onRevoke) {
-                      return
-                    }
-                    onRevoke(selectedCredentialId)
-                  }}
-                >
-                  Revoke selected
-                </button>
-                <button
-                  type="button"
-                  className="rounded border px-2 py-1 text-xs"
-                  onClick={() => {
-                    setShowSavedCredentials(false)
-                    requestAnimationFrame(() => {
-                      savedCredentialsTriggerRef.current?.focus()
-                    })
-                  }}
-                >
-                  Close panel
-                </button>
-              </div>
-            </div>
-          ) : null}
-        </section>
-      ) : null}
+          <section className="space-y-1.5">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Saved Providers</p>
+            {visibleCredentials.length > 0 ? (
+              <Table className="text-xs">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="h-8 px-2 text-[11px] font-semibold text-muted-foreground">Provider</TableHead>
+                    <TableHead className="h-8 px-2 text-[11px] font-semibold text-muted-foreground">Auth Method</TableHead>
+                    <TableHead className="h-8 px-2 text-[11px] font-semibold text-muted-foreground">Key</TableHead>
+                    <TableHead className="h-8 w-20 px-2 text-[11px] font-semibold text-muted-foreground">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {visibleCredentials.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell className="py-1.5 text-xs">{providerNameById.get(item.provider) ?? item.provider}</TableCell>
+                      <TableCell className="py-1.5 text-xs">
+                        {authMethodLabel(item.authType, item.authPayload ?? getCredentialAuth(item.id))}
+                      </TableCell>
+                      <TableCell className="py-1.5 font-mono text-[11px]">{resolveCredentialSecret(item)}</TableCell>
+                      <TableCell className="py-1.5">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 px-2 text-xs"
+                          onClick={() => onRevoke?.(item.id)}
+                          disabled={!onRevoke}
+                        >
+                          Revoke
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <p className="text-xs text-muted-foreground">No saved providers yet.</p>
+            )}
+          </section>
+        </CardContent>
+      </Card>
     </form>
   )
 }

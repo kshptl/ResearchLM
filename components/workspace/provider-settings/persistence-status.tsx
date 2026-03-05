@@ -1,6 +1,7 @@
 "use client"
 
 import React from "react"
+import { Button } from "@/components/ui/button"
 
 type Props = {
   status: "idle" | "saving" | "error"
@@ -20,26 +21,26 @@ export function PersistenceStatus({
   onSimulateConflict
 }: Props) {
   const actions = (
-    <div className="mt-2 flex flex-wrap gap-2">
-      <button type="button" onClick={onSnapshotNow} className="rounded border px-2 py-1 text-xs">
+    <div className="mt-1.5 flex flex-wrap gap-1.5">
+      <Button type="button" onClick={onSnapshotNow} variant="outline" size="sm" className="h-7 px-2 text-[11px]">
         Snapshot now
-      </button>
-      <button type="button" onClick={onExportBackup} className="rounded border px-2 py-1 text-xs">
+      </Button>
+      <Button type="button" onClick={onExportBackup} variant="outline" size="sm" className="h-7 px-2 text-[11px]">
         Export backup
-      </button>
-      <button type="button" onClick={onImportBackup} className="rounded border px-2 py-1 text-xs">
+      </Button>
+      <Button type="button" onClick={onImportBackup} variant="outline" size="sm" className="h-7 px-2 text-[11px]">
         Import backup
-      </button>
-      <button type="button" onClick={onSimulateConflict} className="rounded border px-2 py-1 text-xs">
+      </Button>
+      <Button type="button" onClick={onSimulateConflict} variant="outline" size="sm" className="h-7 px-2 text-[11px]">
         Simulate conflict
-      </button>
+      </Button>
     </div>
   )
 
   if (status === "idle") {
     return (
       <div>
-        <p className="text-xs text-slate-500">Local persistence ready</p>
+        <p className="text-[11px] text-muted-foreground">Local persistence ready</p>
         {actions}
       </div>
     )
@@ -48,7 +49,7 @@ export function PersistenceStatus({
   if (status === "saving") {
     return (
       <div>
-        <p className="text-xs text-slate-500">Saving workspace...</p>
+        <p className="text-[11px] text-muted-foreground">Saving workspace...</p>
         {actions}
       </div>
     )
@@ -56,11 +57,11 @@ export function PersistenceStatus({
 
   return (
     <div>
-      <div className="flex items-center gap-2">
-        <p className="text-xs text-red-600">Failed to save workspace</p>
-        <button type="button" onClick={onRetry} className="rounded border px-2 py-1 text-xs">
+      <div className="flex items-center gap-1.5">
+        <p className="text-[11px] text-destructive">Failed to save workspace</p>
+        <Button type="button" onClick={onRetry} variant="outline" size="sm" className="h-7 px-2 text-[11px]">
           Retry
-        </button>
+        </Button>
       </div>
       {actions}
     </div>

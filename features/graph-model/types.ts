@@ -36,6 +36,7 @@ export interface GraphNode {
   canvasId: string
   type: NodeType
   prompt?: string
+  promptContextBlocks?: string[]
   content: string
   semanticRepresentations?: Partial<Record<SemanticLevel, string>>
   position: { x: number; y: number }

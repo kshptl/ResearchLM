@@ -1,4 +1,4 @@
-export type GenerationFailureCategory = "auth" | "permission" | "network" | "quality" | "unknown"
+export type GenerationFailureCategory = "auth" | "permission" | "network" | "unknown"
 export type GenerationFailureAction = "retry" | "change-action" | "update-credentials" | "dismiss"
 
 export interface GenerationFailureNotice {
@@ -15,9 +15,6 @@ export interface GenerationFailureNotice {
 function actionsForCategory(category: GenerationFailureCategory): GenerationFailureAction[] {
   if (category === "auth" || category === "permission") {
     return ["update-credentials", "change-action", "dismiss"]
-  }
-  if (category === "quality") {
-    return ["retry", "change-action", "dismiss"]
   }
   return ["retry", "dismiss"]
 }
@@ -46,9 +43,6 @@ export function categorizeGenerationFailure(message: string): GenerationFailureC
   }
   if (/permission|forbidden|not allowed/i.test(message)) {
     return "permission"
-  }
-  if (/quality|off-topic|repetitive|empty|malformed/i.test(message)) {
-    return "quality"
   }
   if (/network|timeout|stream/i.test(message)) {
     return "network"

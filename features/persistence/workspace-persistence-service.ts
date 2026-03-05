@@ -1,4 +1,4 @@
-import type { Workspace } from "@/features/graph-model/types"
+import type { Canvas, Edge, GraphNode, HierarchyLink, Workspace } from "@/features/graph-model/types"
 import { persistenceRepository, type WorkspaceSnapshotRecord } from "@/features/persistence/repository"
 import { redactStructuredData } from "@/lib/logging/redaction-policy"
 
@@ -48,6 +48,18 @@ export interface AutosaveScheduler {
   markSnapshotSaved: () => void
 }
 
+export interface WorkspaceGraphSnapshotPayload {
+  canvases: Canvas[]
+  links: HierarchyLink[]
+  nodes: GraphNode[]
+  edges: Edge[]
+  activeCanvasId: string
+  workspaceModelPreference?: {
+    provider: string
+    model: string
+  }
+}
+
 export async function saveWorkspace(workspace: Workspace): Promise<void> {
   await persistenceRepository.putRecord(STORE, workspace)
 }
@@ -94,14 +106,14 @@ export function shouldPersistAdaptiveSnapshot(
 export function createWorkspaceSnapshotRecord(args: {
   workspaceId: string
   reason: WorkspaceSnapshotRecord["reason"]
-  payload: Record<string, unknown>
+  payload: WorkspaceGraphSnapshotPayload | Record<string, unknown>
   commandCount: number
 }): WorkspaceSnapshotRecord {
   return {
     id: `snapshot:${crypto.randomUUID()}`,
     workspaceId: args.workspaceId,
     reason: args.reason,
-    payload: args.payload,
+    payload: args.payload as Record<string, unknown>,
     commandCount: args.commandCount,
     createdAt: new Date().toISOString()
   }

@@ -119,7 +119,6 @@ function redactAuthForLog(auth: GenerationRequestAuth): string {
 export function useGeneration({ provider, model, credential }: Options) {
   const [isStreaming, setIsStreaming] = useState(false)
   const [error, setError] = useState<string>()
-  const [qualityNotice, setQualityNotice] = useState<string>()
   const [failureNotice, setFailureNotice] = useState<GenerationFailureNotice>()
   const activeRequests = useRef(0)
 
@@ -135,7 +134,6 @@ export function useGeneration({ provider, model, credential }: Options) {
       // Only clear global error state if this is the first active request
       if (activeRequests.current === 0) {
         setError(undefined)
-        setQualityNotice(undefined)
         setFailureNotice(undefined)
       }
       activeRequests.current += 1
@@ -193,21 +191,9 @@ export function useGeneration({ provider, model, credential }: Options) {
           throw new Error("Unable to stream model response")
         }
 
-        const { text, qualityNotice: qn } = onDelta
+        const { text } = onDelta
           ? await consumeGenerationStreamIncremental(response.body, prompt, onDelta)
           : await consumeGenerationStream(response.body, prompt)
-
-        if (qn) {
-          setQualityNotice(`${qn.message} (${qn.actions.join("/")})`)
-          setFailureNotice(
-            createGenerationFailureNotice({
-              category: "quality",
-              message: qn.message,
-              requestId,
-              provider: effectiveProvider
-            })
-          )
-        }
 
         const completionLog: LocalGenerationLog = {
           id: crypto.randomUUID(),
@@ -216,7 +202,7 @@ export function useGeneration({ provider, model, credential }: Options) {
           provider: effectiveProvider,
           outcome: "ok",
           timestamp: new Date().toISOString(),
-          metadata: { intent, hasQualityNotice: Boolean(qn) }
+          metadata: { intent }
         }
         await persistenceRepository.saveLocalGenerationLog(completionLog)
         await emitStructuredLocalLog({
@@ -269,7 +255,6 @@ export function useGeneration({ provider, model, credential }: Options) {
   return {
     isStreaming,
     error,
-    qualityNotice,
     failureNotice,
     runIntent
   }

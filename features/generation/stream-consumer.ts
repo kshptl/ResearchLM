@@ -1,13 +1,3 @@
-import {
-  evaluateOutputQuality,
-  malformedOutputNotice,
-  type OutputQualityCategory,
-  type OutputQualityNotice
-} from "@/features/generation/output-contract"
-
-export type QualityNoticeCategory = OutputQualityCategory
-export type QualityNotice = OutputQualityNotice
-
 type ParsedEvent = {
   event: string
   data: Record<string, unknown>
@@ -57,8 +47,8 @@ function parseSsePayload(raw: string): { events: ParsedEvent[]; malformed: boole
 
 export async function consumeGenerationStream(
   stream: ReadableStream<Uint8Array>,
-  sourceText: string
-): Promise<{ text: string; qualityNotice: QualityNotice | null }> {
+  _sourceText: string
+): Promise<{ text: string }> {
   const reader = stream.getReader()
   const decoder = new TextDecoder()
   let raw = ""
@@ -71,13 +61,7 @@ export async function consumeGenerationStream(
     raw += decoder.decode(value, { stream: true })
   }
 
-  const { events, malformed } = parseSsePayload(raw)
-  if (malformed) {
-    return {
-      text: "",
-      qualityNotice: malformedOutputNotice()
-    }
-  }
+  const { events } = parseSsePayload(raw)
 
   const streamError = events.find((event) => event.event === "error")
   if (streamError) {
@@ -91,20 +75,18 @@ export async function consumeGenerationStream(
 
   return {
     text,
-    qualityNotice: evaluateOutputQuality(text, sourceText)
   }
 }
 
 export async function consumeGenerationStreamIncremental(
   stream: ReadableStream<Uint8Array>,
-  sourceText: string,
+  _sourceText: string,
   onDelta: (chunk: string) => void
-): Promise<{ text: string; qualityNotice: QualityNotice | null }> {
+): Promise<{ text: string }> {
   const reader = stream.getReader()
   const decoder = new TextDecoder()
   let buffer = ""
   let fullText = ""
-  let hadMalformed = false
 
   while (true) {
     const { done, value } = await reader.read()
@@ -117,8 +99,7 @@ export async function consumeGenerationStreamIncremental(
 
     for (const frame of frames) {
       if (!frame.trim()) continue
-      const { events, malformed } = parseSsePayload(frame)
-      if (malformed) hadMalformed = true
+      const { events } = parseSsePayload(frame)
 
       for (const event of events) {
         if (event.event === "error") {
@@ -135,8 +116,7 @@ export async function consumeGenerationStreamIncremental(
 
   // Process any remaining buffer
   if (buffer.trim()) {
-    const { events, malformed } = parseSsePayload(buffer)
-    if (malformed) hadMalformed = true
+    const { events } = parseSsePayload(buffer)
     for (const event of events) {
       if (event.event === "error") {
         throw new Error(asStreamErrorMessage(event.data))
@@ -149,12 +129,7 @@ export async function consumeGenerationStreamIncremental(
     }
   }
 
-  if (hadMalformed && !fullText) {
-    return { text: "", qualityNotice: malformedOutputNotice() }
-  }
-
   return {
     text: fullText,
-    qualityNotice: evaluateOutputQuality(fullText, sourceText),
   }
 }

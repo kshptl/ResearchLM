@@ -1,6 +1,7 @@
 "use client"
 
 import React from "react"
+import { Button } from "@/components/ui/button"
 
 type Props = {
   onAddBroadTopic: () => void
@@ -11,15 +12,15 @@ type Props = {
 export function HierarchyControls({ onAddBroadTopic, onAddSubtopic, onAddSibling }: Props) {
   return (
     <div className="flex flex-wrap gap-2">
-      <button type="button" className="rounded border px-2 py-1 text-xs" onClick={onAddBroadTopic}>
+      <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={onAddBroadTopic}>
         Broad topic
-      </button>
-      <button type="button" className="rounded border px-2 py-1 text-xs" onClick={onAddSubtopic}>
+      </Button>
+      <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={onAddSubtopic}>
         Subtopic
-      </button>
-      <button type="button" className="rounded border px-2 py-1 text-xs" onClick={onAddSibling}>
+      </Button>
+      <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={onAddSibling}>
         Sibling
-      </button>
+      </Button>
     </div>
   )
 }

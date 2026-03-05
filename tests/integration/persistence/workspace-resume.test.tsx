@@ -1,36 +1,48 @@
-import "@/tests/helpers/mock-react-flow"
-import React from "react"
-import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it } from "vitest"
-import WorkspacePage from "@/app/(workspace)/page"
 import { persistenceRepository } from "@/features/persistence/repository"
+import { loadLatestWorkspaceSnapshot } from "@/features/persistence/workspace-persistence-service"
 
-describe("workspace resume", () => {
+describe("workspace resume persistence", () => {
   beforeEach(async () => {
     await persistenceRepository.clearStore("snapshots")
-    await persistenceRepository.clearStore("hierarchyLinks")
-    await persistenceRepository.clearStore("generatedSubtopicCandidates")
+    await persistenceRepository.clearStore("chatSessions")
+    await persistenceRepository.clearStore("settings")
   })
 
-  it("renders persistence status", async () => {
-    const view = render(<WorkspacePage />)
-
-    // Open settings drawer to access persistence controls
-    fireEvent.click(screen.getByRole("button", { name: "Open settings" }))
-
-    expect(screen.getByText("Local persistence ready")).toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole("button", { name: /^Subtopic$/ }))
-    fireEvent.click(screen.getByRole("button", { name: "Snapshot now" }))
-
-    view.unmount()
-    render(<WorkspacePage />)
-
-    // Open settings drawer again after remount
-    fireEvent.click(screen.getByRole("button", { name: "Open settings" }))
-
-    await waitFor(() => {
-      expect(screen.getByText("Links: 1")).toBeInTheDocument()
+  it("stores snapshots per chat id and resolves latest snapshot for resume", async () => {
+    const now = new Date().toISOString()
+    await persistenceRepository.saveWorkspaceSnapshot({
+      id: "snapshot:1",
+      workspaceId: "chat-1",
+      reason: "autosave",
+      commandCount: 1,
+      createdAt: "2026-03-04T10:00:00.000Z",
+      payload: { nodes: [] },
     })
+    await persistenceRepository.saveWorkspaceSnapshot({
+      id: "snapshot:2",
+      workspaceId: "chat-1",
+      reason: "autosave",
+      commandCount: 2,
+      createdAt: "2026-03-04T10:05:00.000Z",
+      payload: { nodes: [{ id: "n1" }] },
+    })
+    await persistenceRepository.saveChatSession({
+      id: "chat-1",
+      workspaceId: "chat-1",
+      title: "Resume Target",
+      createdAt: now,
+      updatedAt: now,
+      lastOpenedAt: now,
+      lastSnapshotAt: now,
+      nodeCount: 1,
+      edgeCount: 0,
+      provider: "openai",
+      model: "gpt-4o-mini",
+    })
+
+    const latest = await loadLatestWorkspaceSnapshot("chat-1")
+    expect(latest?.id).toBe("snapshot:2")
+    expect((latest?.payload as { nodes?: Array<{ id: string }> }).nodes?.[0]?.id).toBe("n1")
   })
 })
