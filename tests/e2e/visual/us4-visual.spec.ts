@@ -1,18 +1,27 @@
 import { expect, test } from "@playwright/test";
-import { openWorkspace, stabilizeVisualPage } from "./visual-test-helpers";
+import {
+  mockGeneration,
+  openWorkspace,
+  stabilizeVisualPage,
+  submitLandingPrompt,
+} from "./visual-test-helpers";
 
 test.describe("US4 visual regression", () => {
-  test("captures autosave startup state", async ({ page }) => {
+  test("captures the resume chooser after autosave", async ({ page }) => {
+    await mockGeneration(page, ["Resume response"]);
     await openWorkspace(page);
 
-    await expect(
-      page.getByPlaceholder("Type a topic or question..."),
-    ).toBeVisible();
-    await stabilizeVisualPage(page);
-    await expect(page).toHaveScreenshot(
-      "us4-vs009-vs010-persistence-conflict.png",
-      { fullPage: true },
+    await submitLandingPrompt(page, "Resume visual topic");
+    await expect(page.getByRole("article").first()).toContainText(
+      "Resume response",
     );
+    await page.waitForTimeout(800);
+    await page.reload();
+    await expect(page.getByText("Resume chat")).toBeVisible();
+    await stabilizeVisualPage(page);
+    await expect(page).toHaveScreenshot("us4-vs009-resume-chooser.png", {
+      fullPage: true,
+    });
   });
 
   test("captures settings drawer state", async ({ page }) => {
@@ -23,7 +32,7 @@ test.describe("US4 visual regression", () => {
       page.getByRole("complementary", { name: "Settings" }),
     ).toBeVisible();
     await stabilizeVisualPage(page);
-    await expect(page).toHaveScreenshot("us4-vs011-recovery-required.png", {
+    await expect(page).toHaveScreenshot("us4-vs011-settings-drawer.png", {
       fullPage: true,
     });
   });

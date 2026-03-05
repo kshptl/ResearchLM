@@ -1,25 +1,20 @@
 import { expect, test } from "@playwright/test";
 
-test("tab focus order remains deterministic across panes", async ({ page }) => {
+test("settings panel keeps keyboard focus on current interactive controls", async ({
+  page,
+}) => {
   await page.goto("/");
 
-  await page.keyboard.press("Tab");
+  await page.getByRole("button", { name: "Open settings" }).click();
   await expect(
-    page.getByRole("button", { name: "Broad topic", exact: true }),
-  ).toBeFocused();
+    page.getByRole("complementary", { name: "Settings" }),
+  ).toBeVisible();
 
   await page.keyboard.press("Tab");
   await expect(
-    page.getByRole("button", { name: "Subtopic", exact: true }),
+    page.getByRole("button", { name: "Close", exact: true }),
   ).toBeFocused();
 
   await page.keyboard.press("Tab");
-  await expect(
-    page.getByRole("button", { name: "Sibling", exact: true }),
-  ).toBeFocused();
-
-  await page.keyboard.press("Tab");
-  await expect(
-    page.getByRole("button", { name: "select", exact: true }),
-  ).toBeFocused();
+  await expect(page.getByRole("combobox").first()).toBeFocused();
 });

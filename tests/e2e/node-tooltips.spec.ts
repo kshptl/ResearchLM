@@ -3,6 +3,14 @@ import { expect, test } from "@playwright/test";
 test("node footer action tooltips render with non-transparent shadcn popover styling", async ({
   page,
 }) => {
+  await page.route("**/api/llm/stream", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "text/event-stream",
+      body: `event: delta\ndata: ${JSON.stringify({ text: "Tooltip response" })}\n\n`,
+    });
+  });
+
   await page.goto("/");
 
   const promptInput = page.getByPlaceholder("Type a topic or question...");
@@ -16,7 +24,7 @@ test("node footer action tooltips render with non-transparent shadcn popover sty
   await followUpAction.hover();
 
   const tooltip = page
-    .locator(".bg-foreground")
+    .locator('[data-slot="tooltip-content"]')
     .filter({ hasText: "Follow up" })
     .first();
   await expect(tooltip).toBeVisible();

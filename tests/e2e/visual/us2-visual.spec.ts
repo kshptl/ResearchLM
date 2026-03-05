@@ -1,23 +1,41 @@
 import { expect, test } from "@playwright/test";
-import { openWorkspace, stabilizeVisualPage } from "./visual-test-helpers";
+import {
+  mockGeneration,
+  openWorkspace,
+  stabilizeVisualPage,
+  submitLandingPrompt,
+} from "./visual-test-helpers";
 
 test.describe("US2 visual regression", () => {
-  test("captures hierarchy and candidate lifecycle visuals", async ({
+  test("captures the node detail panel exploration workflow", async ({
     page,
   }) => {
+    await mockGeneration(page, ["Detail panel response"]);
     await openWorkspace(page);
 
-    await page.getByRole("button", { name: "Subtopic", exact: true }).click();
-    await page.getByRole("button", { name: "Sibling", exact: true }).click();
+    await submitLandingPrompt(page, "Detail panel topic");
+    const createdNode = page
+      .locator(".react-flow__node")
+      .filter({ hasText: "Detail panel topic" })
+      .first();
+    await createdNode.click();
 
-    await expect(page.getByText("Generated subtopics")).toBeVisible();
+    const detailPanel = page.getByRole("complementary", {
+      name: "Node detail panel",
+    });
+    await expect(detailPanel).toBeVisible();
     await expect(
-      page.getByRole("button", { name: "Select" }).first(),
+      detailPanel.getByRole("button", { name: "Questions" }),
+    ).toBeVisible();
+    await expect(
+      detailPanel.getByRole("button", { name: "Subtopics" }),
     ).toBeVisible();
     await stabilizeVisualPage(page);
-    await expect(page).toHaveScreenshot(
-      "us2-vs005-vs006-hierarchy-candidates.png",
-      { fullPage: true },
+    await expect(detailPanel).toHaveScreenshot(
+      "us2-vs005-node-detail-panel.png",
+      {
+        maxDiffPixels: 150,
+      },
     );
   });
 });

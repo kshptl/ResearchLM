@@ -33,6 +33,27 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Cache electron-builder binaries (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/electron-builder
+          key: electron-builder-${{ matrix.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Cache electron-builder binaries (Windows)
+        if: matrix.os == 'windows-latest'
+        uses: actions/cache@v4
+        with:
+          path: ~\AppData\Local\electron-builder\Cache
+          key: electron-builder-${{ matrix.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Cache electron-builder binaries (macOS)
+        if: matrix.os == 'macos-latest'
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/electron-builder
+          key: electron-builder-${{ matrix.os }}-${{ hashFiles('package-lock.json') }}
+
       - name: Detect release credential availability
         id: release-capabilities
         shell: bash
@@ -84,17 +105,39 @@ jobs:
 
       - name: Build desktop artifacts (Windows signed)
         if: matrix.os == 'windows-latest' && steps.release-capabilities.outputs.has_windows_signing == 'true'
+        shell: bash
         env:
           CSC_LINK: ${{ secrets.WINDOWS_CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CSC_KEY_PASSWORD }}
           CSC_NAME: ${{ secrets.WINDOWS_CSC_NAME }}
           WIN_CSC_LINK: ${{ secrets.WINDOWS_CSC_LINK }}
           WIN_CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CSC_KEY_PASSWORD }}
-        run: npm run dist:desktop
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            if npm run dist:desktop; then
+              exit 0
+            fi
+            if [[ "$attempt" == "3" ]]; then
+              exit 1
+            fi
+            sleep $((attempt * 15))
+          done
 
       - name: Build desktop artifacts (Windows unsigned)
         if: matrix.os == 'windows-latest' && steps.release-capabilities.outputs.has_windows_signing != 'true'
-        run: npm run dist:desktop
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            if npm run dist:desktop; then
+              exit 0
+            fi
+            if [[ "$attempt" == "3" ]]; then
+              exit 1
+            fi
+            sleep $((attempt * 15))
+          done
 
       - name: Prepare Apple API key file
         if: matrix.os == 'macos-latest' && steps.release-capabilities.outputs.has_macos_signing == 'true' && steps.release-capabilities.outputs.has_macos_api_key_notarization == 'true'

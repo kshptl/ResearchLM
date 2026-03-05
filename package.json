@@ -20,7 +20,7 @@
     "dev:desktop": "concurrently -k -n NEXT,ELECTRON \"cross-env NEXT_PUBLIC_DISABLE_VERCEL_ANALYTICS=1 next dev -p 3000\" \"wait-on http://localhost:3000 && cross-env ELECTRON_DEV=1 ELECTRON_START_URL=http://localhost:3000 electron ./electron/main.cjs\"",
     "build": "next build",
     "build:web": "next build",
-    "build:desktop:web": "cross-env BUILD_TARGET=electron NEXT_PUBLIC_DISABLE_VERCEL_ANALYTICS=1 next build",
+    "build:desktop:web": "cross-env BUILD_TARGET=electron NEXT_PUBLIC_DISABLE_VERCEL_ANALYTICS=1 next build --webpack",
     "prepare:desktop": "node scripts/prepare-electron.mjs",
     "checksums:release": "node scripts/generate-release-checksums.mjs",
     "build:desktop": "npm run build:desktop:web && npm run prepare:desktop && electron-builder --dir --publish never",
@@ -36,8 +36,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "test:visual": "playwright test tests/e2e/visual",
-    "test:visual:update": "playwright test tests/e2e/visual --update-snapshots",
+    "test:visual": "playwright test --config=playwright.visual.config.ts",
+    "test:visual:update": "playwright test --config=playwright.visual.config.ts --update-snapshots",
     "validate:visual-coverage": "node scripts/validate-visual-coverage.mjs"
   },
   "dependencies": {

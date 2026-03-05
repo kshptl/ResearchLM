@@ -1,25 +1,45 @@
 import { expect, test } from "@playwright/test";
 
-test("multilevel hierarchy workflow adds and navigates canvases", async ({
+test("selecting a node opens the detail panel with current exploration actions", async ({
   page,
 }) => {
+  await page.route("**/api/llm/stream", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "text/event-stream",
+      body: `event: delta\ndata: ${JSON.stringify({ text: "Node detail response" })}\n\n`,
+    });
+  });
+
   await page.goto("/");
-  await expect(page.getByText("Hierarchy")).toBeVisible();
 
-  const hierarchyButtons = page
-    .getByRole("button")
-    .filter({ has: page.locator("span.font-medium") });
-  const initialCount = await hierarchyButtons.count();
+  const promptInput = page.getByPlaceholder("Type a topic or question...");
+  await promptInput.fill("Node detail topic");
+  await promptInput.press("Enter");
 
-  await page.getByRole("button", { name: "Subtopic", exact: true }).click();
-  await expect(hierarchyButtons).toHaveCount(initialCount + 1);
-
-  await page.getByRole("button", { name: "Broad topic", exact: true }).click();
-  await expect(hierarchyButtons).toHaveCount(initialCount + 2);
-
-  const rootTopicButton = hierarchyButtons
-    .filter({ hasText: "Root Topic" })
+  const createdNode = page
+    .locator(".react-flow__node")
+    .filter({ hasText: "Node detail topic" })
     .first();
-  await rootTopicButton.click();
-  await expect(rootTopicButton).toHaveAttribute("aria-current", "page");
+  await expect(createdNode).toBeVisible();
+  await createdNode.click();
+
+  const detailPanel = page.getByRole("complementary", {
+    name: "Node detail panel",
+  });
+  await expect(detailPanel).toBeVisible();
+  await expect(detailPanel.getByLabel("Node prompt")).toBeVisible();
+  await expect(detailPanel.getByTestId("node-response-markdown")).toBeVisible();
+  await expect(
+    detailPanel.getByRole("button", { name: "Questions" }),
+  ).toBeVisible();
+  await expect(
+    detailPanel.getByRole("button", { name: "Subtopics" }),
+  ).toBeVisible();
+  await expect(
+    detailPanel.getByRole("button", { name: "Summarize" }),
+  ).toBeVisible();
+  await expect(
+    detailPanel.getByRole("button", { name: "Regenerate" }),
+  ).toBeVisible();
 });
